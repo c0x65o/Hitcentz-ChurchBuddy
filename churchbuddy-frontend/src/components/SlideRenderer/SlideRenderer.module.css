@@ -9,48 +9,57 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 40px;
+  box-sizing: border-box;
 }
 
 .slideContent {
-  /* Template size is set inline in the component */
-  background: black;
+  /* Centering wrapper */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.slideText {
+  background: transparent;
   position: relative;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   line-height: 1.4;
   color: white;
   text-align: center;
-  padding: 40px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* Font size will be set inline by the component */
+  /* Let content size itself naturally */
+  display: inline-block;
+  max-width: 100%;
+  max-height: 100%;
+  white-space: normal;
+  word-break: keep-all;
 }
 
-.slideContent h1,
-.slideContent h2,
-.slideContent h3,
-.slideContent p {
+.slideText h1,
+.slideText h2,
+.slideText h3,
+.slideText p {
   margin: 0;
   font-weight: 600;
-  max-width: 90%;
-  word-wrap: break-word;
-  /* Fixed font sizes - no responsive scaling */
-  font-size: 48px;
+  /* Font size inherited from parent */
 }
 
-.slideContent h2 {
-  font-size: 36px;
+.slideText h2 {
+  font-size: 0.8em; /* Relative to parent font size */
 }
 
-.slideContent h3 {
-  font-size: 28px;
+.slideText h3 {
+  font-size: 0.7em; /* Relative to parent font size */
 }
 
-.slideContent p {
-  font-size: 24px;
+.slideText p {
+  font-size: 0.6em; /* Relative to parent font size */
 }
 
-.slideContent img {
+.slideText img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
