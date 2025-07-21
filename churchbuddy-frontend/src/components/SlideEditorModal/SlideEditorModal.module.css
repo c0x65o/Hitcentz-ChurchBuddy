@@ -1,0 +1,183 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal {
+  width: 90vw;
+  height: 90vh;
+  max-width: 1200px;
+  max-height: 800px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.toolbar {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-shrink: 0;
+}
+
+.toolGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toolButton {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toolButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.toolButton:active {
+  transform: translateY(1px);
+}
+
+.closeButton {
+  background: rgba(255, 0, 0, 0.2);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.closeButton:hover {
+  background: rgba(255, 0, 0, 0.3);
+  border-color: rgba(255, 0, 0, 0.5);
+}
+
+.canvasContainer {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.canvas {
+  width: 100%;
+  max-width: 800px;
+  aspect-ratio: 16/9;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+.textElement,
+.imageElement,
+.videoElement {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+}
+
+.textElement {
+  background: transparent;
+  border: 2px solid transparent;
+  padding: 4px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  outline: none;
+}
+
+.textElement.selected {
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 1px rgba(76, 175, 80, 0.3);
+}
+
+.textElement:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.imageElement {
+  border: 2px solid transparent;
+  object-fit: contain;
+}
+
+.imageElement.selected {
+  border-color: #2196F3;
+  box-shadow: 0 0 0 1px rgba(33, 150, 243, 0.3);
+}
+
+.imageElement:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.videoElement {
+  border: 2px solid transparent;
+}
+
+.videoElement.selected {
+  border-color: #FF5722;
+  box-shadow: 0 0 0 1px rgba(255, 87, 34, 0.3);
+}
+
+.videoElement:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Selection handles */
+.selected::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 8px;
+  height: 8px;
+  background: white;
+  border: 1px solid #333;
+  border-radius: 2px;
+  cursor: nw-resize;
+}
+
+.selected::before {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: -4px;
+  width: 8px;
+  height: 8px;
+  background: white;
+  border: 1px solid #333;
+  border-radius: 2px;
+  cursor: se-resize;
+} 

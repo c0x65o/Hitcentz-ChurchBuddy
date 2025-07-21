@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ISlide } from '../../types/ISlide';
 import SlideThumbnail from '../SlideThumbnail/SlideThumbnail';
 import styles from './SlideThumbnailList.module.css';
@@ -8,28 +8,48 @@ interface SlideThumbnailListProps {
   onReorder?: (slides: ISlide[]) => void;
   onEdit?: (slideId: string) => void;
   onDelete?: (slideId: string) => void;
+  title?: string;
 }
 
 const SlideThumbnailList: React.FC<SlideThumbnailListProps> = ({
   slides,
   onReorder,
   onEdit,
-  onDelete
+  onDelete,
+  title = "Slides"
 }) => {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
-    <div className={styles.container}>
-      <div className={styles.scrollContainer}>
-        {slides.map((slide) => (
-          <div key={slide.id} className={styles.thumbnailWrapper}>
-            <SlideThumbnail
-              slide={slide}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          </div>
-        ))}
+    <>
+      <button
+        className={`${styles.toggle} ${collapsed ? styles.toggleCollapsed : ''}`}
+        onClick={() => setCollapsed((prev) => !prev)}
+        title={collapsed ? 'Expand slide list' : 'Collapse slide list'}
+      >
+        <span>{collapsed ? '«' : '»'}</span>
+        <span className={styles.tabLabel}>Slides</span>
+      </button>
+
+      <div className={`${styles.container} ${collapsed ? styles.collapsed : ''}`}>
+        {!collapsed && (
+          <>
+            <div className={styles.title}>{title}</div>
+            <div className={styles.scrollContainer}>
+              {slides.map((slide) => (
+                <div key={slide.id} className={styles.thumbnailWrapper}>
+                  <SlideThumbnail
+                    slide={slide}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
-    </div>
+    </>
   );
 };
 

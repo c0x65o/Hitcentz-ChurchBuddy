@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './App.css';
 import SlideRenderer from './components/SlideRenderer/SlideRenderer';
 import SlideThumbnailList from './components/SlideThumbnailList/SlideThumbnailList';
+import Sidebar from './components/Sidebar/Sidebar';
 import { ISlide } from './types/ISlide';
 
 function App() {
@@ -87,17 +88,32 @@ function App() {
         <h1>ChurchBuddy</h1>
         <p>Worship & Sermon Presentation Tool</p>
       </header>
+      {/* Fixed Sidebar - Example with Songs */}
+      <Sidebar 
+        title="Songs"
+        items={[
+          'Amazing Grace',
+          'How Great Thou Art', 
+          'It Is Well',
+          'Great Is Thy Faithfulness',
+          'What A Friend We Have In Jesus'
+        ]}
+        onSelectItem={(song) => console.log('Selected song:', song)}
+      />
+
       <main className="App-main">
+        {/* Slide Preview */}
         <div className="slide-preview">
           <SlideRenderer slide={currentSlide} />
         </div>
-        <div className="slide-list">
-          <SlideThumbnailList
-            slides={slides}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
-        </div>
+
+        {/* Fixed Slide Thumbnails */}
+        <SlideThumbnailList
+          slides={slides}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          title="Slides"
+        />
       </main>
     </div>
   );
