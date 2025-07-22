@@ -10,7 +10,7 @@
 - [x] 7. Sidebar: Design and implement the `Sidebar` component (search + list view).
 - [x] 8. SearchBar: Design and implement the `SearchBar` component (real-time module-specific search).
 - [x] 9. SlideEditorModal: Design and implement the `SlideEditorModal` component with its toolbar features (add/move/resize text box, font size/color/fonts, add image, add YouTube video player, bold/italic, rotate image by 90 degrees).
-- [ ] 10. MyMediaLibrary: Design and implement the `MyMediaLibrary` component (grid view, uploader, image usage tracking, delete assets, assign image as background to collections/slides, drag-and-drop import).
+- [x] 10. MyMediaLibrary: Design and implement the `MyMediaLibrary` component (grid view, uploader, image usage tracking, delete assets, assign image as background to collections/slides, drag-and-drop import).
 
 ## Phase 2: Module Development
 - [ ] 11. Presenter Page: Develop the Presenter Page: display slides, set `ACTIVESLIDE`, scale backgrounds, log to console, preview window. No editing tools.

@@ -2,22 +2,28 @@ import React from 'react';
 import styles from './SlideEditorModal.module.css';
 import { ISlide } from '../../types/ISlide';
 import SlideRenderer from '../SlideRenderer/SlideRenderer';
+import MyMediaLibrary from '../MyMediaLibrary/MyMediaLibrary';
 
 interface SlideEditorModalProps {
   slide: ISlide;
   isOpen: boolean;
   onClose: () => void;
   onSave: (updatedSlide: ISlide, shouldCloseModal?: boolean) => void;
+  isEmbedded?: boolean;
 }
 
 const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
   slide,
   isOpen,
   onClose,
-  onSave
+  onSave,
+  isEmbedded = false
 }) => {
   const [currentSlideHtml, setCurrentSlideHtml] = React.useState(slide.html);
   const [saveAttempts, setSaveAttempts] = React.useState(0);
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = React.useState(false);
+  const [isSelectingBackground, setIsSelectingBackground] = React.useState(false);
+  const [hasBackground, setHasBackground] = React.useState(false);
 
   // Update HTML when slide changes
   React.useEffect(() => {
@@ -42,7 +48,153 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     
     console.log('Cleaned initial HTML:', cleanInitialHtml);
     setCurrentSlideHtml(cleanInitialHtml);
+    
+    // Detect background via HTML comment
+    const bgMatch = cleanInitialHtml.match(/<!--BACKGROUND:(.*?)-->/i);
+    const bgUrl = bgMatch ? bgMatch[1] : null;
+    setHasBackground(!!bgUrl);
+    if (bgUrl) {
+      // Apply after 50ms to allow DOM render
+      setTimeout(() => applyBackgroundStyle(bgUrl), 50);
+    }
+
+    // Initialize z-index for elements after DOM renders
+    setTimeout(() => {
+      initializeElementZIndex();
+    }, 100);
   }, [slide.html]);
+
+  // Add keyboard event listener for delete functionality
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if Delete or Backspace key is pressed
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
+        if (selectedElement) {
+          // Prevent default browser behavior
+          e.preventDefault();
+          
+          console.log('Deleting selected element:', selectedElement.tagName);
+          
+          // Remove the element from DOM
+          if (selectedElement.parentNode) {
+            selectedElement.parentNode.removeChild(selectedElement);
+          }
+          
+          // Clean up any handles associated with this element
+          const existingHandles = document.querySelectorAll('[data-handle-name], [data-handle-type], [data-element-id]');
+          existingHandles.forEach(handle => {
+            if (handle.parentNode) {
+              handle.parentNode.removeChild(handle);
+            }
+          });
+          
+          // Save the updated state
+          saveElementState();
+        }
+      }
+    };
+
+    // Add event listener when modal is open
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    // Cleanup event listener
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  // Initialize z-index for elements that don't have one
+  const initializeElementZIndex = () => {
+    const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
+    if (!slideContent) return;
+
+    const elements = slideContent.querySelectorAll('h1, h2, h3, h4, h5, h6, p, div, img, iframe');
+    console.log('Initializing z-index for', elements.length, 'elements');
+    
+    elements.forEach((element, index) => {
+      const htmlElement = element as HTMLElement;
+      if (!htmlElement.style.zIndex || htmlElement.style.zIndex === 'auto') {
+        // Give each element a default z-index starting from 1
+        const defaultZIndex = (index + 1).toString();
+        htmlElement.style.zIndex = defaultZIndex;
+        console.log(`Element ${index} (${htmlElement.tagName}) assigned z-index: ${defaultZIndex}`);
+      } else {
+        console.log(`Element ${index} (${htmlElement.tagName}) already has z-index: ${htmlElement.style.zIndex}`);
+      }
+    });
+  };
+
+  // Layer management functions
+  const getElementsInSlide = (): HTMLElement[] => {
+    const container = document.querySelector('[data-slide-id="modal-editor"]');
+    if (!container) return [];
+    return Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6, p, div, img, iframe')) as HTMLElement[];
+  };
+
+  const normalizeZIndices = (elements: HTMLElement[]) => {
+    // Sort by current z-index ascending and then assign 1,2,3...
+    const sorted = elements.sort((a, b) => {
+      const za = parseInt((a.style.zIndex || '0'), 10);
+      const zb = parseInt((b.style.zIndex || '0'), 10);
+      return za - zb;
+    });
+    sorted.forEach((el, idx) => {
+      el.style.zIndex = (idx + 1).toString();
+    });
+  };
+
+  const handleLayerForward = () => {
+    console.log('=== LAYER FORWARD CLICKED ===');
+    const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement | null;
+    if (!selectedElement) {
+      alert('Please select an element first (click on it)');
+      return;
+    }
+
+    const elements = getElementsInSlide();
+    if (elements.length === 0) return;
+
+    normalizeZIndices(elements);
+
+    // Rebuild list after normalization
+    const ordered = elements.sort((a, b) => parseInt(a.style.zIndex, 10) - parseInt(b.style.zIndex, 10));
+    const idx = ordered.indexOf(selectedElement);
+    if (idx === -1 || idx === ordered.length - 1) return; // Already at top
+
+    const nextEl = ordered[idx + 1];
+    const zSel = selectedElement.style.zIndex;
+    selectedElement.style.zIndex = nextEl.style.zIndex;
+    nextEl.style.zIndex = zSel;
+
+    saveElementState();
+  };
+
+  const handleLayerBack = () => {
+    console.log('=== LAYER BACK CLICKED ===');
+    const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement | null;
+    if (!selectedElement) {
+      alert('Please select an element first (click on it)');
+      return;
+    }
+
+    const elements = getElementsInSlide();
+    if (elements.length === 0) return;
+
+    normalizeZIndices(elements);
+    const ordered = elements.sort((a, b) => parseInt(a.style.zIndex, 10) - parseInt(b.style.zIndex, 10));
+    const idx = ordered.indexOf(selectedElement);
+    if (idx <= 0) return; // Already at bottom
+
+    const prevEl = ordered[idx - 1];
+    const zSel = selectedElement.style.zIndex;
+    selectedElement.style.zIndex = prevEl.style.zIndex;
+    prevEl.style.zIndex = zSel;
+
+    saveElementState();
+  };
 
   // Auto-save all changes before modal closes
   const handleClose = () => {
@@ -156,7 +308,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     }
   }, [isOpen, slide.id]);
 
-  if (!isOpen) return null;
+  if (!isOpen && !isEmbedded) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     // Backdrop click disabled - only close button can close modal
@@ -166,159 +318,45 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
 
 
   const handleTextEdit = (element: HTMLElement, newText: string) => {
-    // === TEXT EDIT START === (logs preserved)
     console.log('=== TEXT EDIT START ===');
-    console.log('Text edited:', newText);
-    console.log('Element:', element.tagName);
-    console.log('Modal isOpen:', isOpen);
-    
-    // Ensure no handles are in DOM (debug)
-    const existingHandles = document.querySelectorAll('[data-handle-name], [data-handle-type]');
-    console.log('Found', existingHandles.length, 'handles during text edit - should be 0 for clean save');
 
     try {
-      // Capture styles (existing logic unchanged)
-      const transform = element.style.transform;
-      const width = element.style.width;
-      const height = element.style.height;
-      const fontSize = element.style.fontSize;
-      const minWidth = element.style.minWidth;
-      const maxWidth = element.style.maxWidth;
-      const minHeight = element.style.minHeight;
-      const maxHeight = element.style.maxHeight;
-      
-      let styleAttr = '';
-      const styles = [];
-      
-      if (transform && (transform.includes('translate') || transform.includes('rotate'))) {
-        styles.push(`transform: ${transform}`);
-        styles.push('position: relative');
-        console.log('Preserving transform:', transform);
+      // After user edits, rebuild entire slide HTML from DOM to ensure consistency
+      const slideContentEl = document.querySelector('[data-slide-id="modal-editor"]');
+      if (!slideContentEl) {
+        console.error('Slide content element not found for saving!');
+        return;
       }
-      
-      if (width && width !== 'auto' && width !== '') {
-        styles.push(`width: ${width}`);
-        console.log('Preserving width:', width);
+
+      // Clone to avoid modifying live DOM while cleaning
+      const cloned = slideContentEl.cloneNode(true) as HTMLElement;
+
+      // Remove any handle elements that might still be present in the cloned DOM
+      cloned.querySelectorAll('[data-handle-name], [data-handle-type], [data-element-id]').forEach(h => h.remove());
+
+      // Serialize cleaned HTML
+      const cleanHtml = cloned.innerHTML;
+
+      if (cleanHtml === currentSlideHtml) {
+        console.log('HTML unchanged after edit – skipping save');
+        return;
       }
-      
-      if (height && height !== 'auto' && height !== '') {
-        styles.push(`height: ${height}`);
-        console.log('Preserving height:', height);
-      }
-      
-      if (fontSize && fontSize !== '') {
-        styles.push(`font-size: ${fontSize}`);
-        console.log('Preserving font-size:', fontSize);
-      }
-      
-      // Add min/max constraints if they exist
-      if (minWidth && minWidth !== '') styles.push(`min-width: ${minWidth}`);
-      if (maxWidth && maxWidth !== 'none' && maxWidth !== '') styles.push(`max-width: ${maxWidth}`);
-      if (minHeight && minHeight !== '') styles.push(`min-height: ${minHeight}`);
-      if (maxHeight && maxHeight !== 'none' && maxHeight !== '') styles.push(`max-height: ${maxHeight}`);
-      
-      if (styles.length > 0) {
-        styleAttr = ` style="${styles.join('; ')}"`;
-        console.log('Complete style attribute:', styleAttr);
-      }
-    
-    // === NEW ID AND REPLACEMENT LOGIC ===
-    const tagName = element.tagName.toLowerCase();
-    const elementId = element.id || `text-element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    element.id = elementId; // Ensure element has ID in DOM
-    const idAttr = ` id="${elementId}"`;
 
-    let styleAttribute = styleAttr ? styleAttr : '';
-    if (!styleAttribute.startsWith(' style')) styleAttribute = ` ${styleAttribute.trim()}`;
-
-    const replacement = `<${tagName}${idAttr}${styleAttribute}>${newText}</${tagName}>`;
-
-    let updatedHtml = currentSlideHtml;
-    const idRegex = new RegExp(`<${tagName}[^>]*id="${elementId}"[^>]*>[\s\S]*?<\/${tagName}>`, 'i');
-
-    if (idRegex.test(updatedHtml)) {
-      console.log('Replacing element by ID');
-      updatedHtml = updatedHtml.replace(idRegex, replacement);
-    } else {
-      console.warn('ID-based replacement failed. Falling back to text-based search');
-      const safeText = newText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const textRegex = new RegExp(`<${tagName}[^>]*>${safeText}<\/${tagName}>`, 'i');
-      updatedHtml = updatedHtml.replace(textRegex, replacement);
-    }
-
-    // === REMOVE DUPLICATES WITH SAME TEXT CONTENT ===
-    const safeNewText = newText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const duplicateRegex = new RegExp(`<${tagName}[^>]*>\\s*${safeNewText}\\s*<\\/${tagName}>`, 'gi');
-    
-    // Count occurrences
-    let match;
-    let count = 0;
-    const tempRegex = new RegExp(duplicateRegex.source, 'gi');
-    while ((match = tempRegex.exec(updatedHtml)) !== null) {
-      count++;
-      if (count > 10) break; // Safety limit
-    }
-    
-    if (count > 1) {
-      console.log('Removing', count - 1, 'duplicate elements of same text');
-      // Keep first occurrence, remove rest
-      let first = true;
-      updatedHtml = updatedHtml.replace(duplicateRegex, (match) => {
-        if (first) { 
-          first = false; 
-          return match; 
-        }
-        return '';
-      });
-    }
-
-    // === CLEAN HANDLES (existing logic moved here) ===
-    let cleanHtml = updatedHtml
-      .replace(/<div[^>]*data-handle-[^>]*>[\s\S]*?<\/div>/gi, '')
-      .replace(/<div[^>]*data-element-id[^>]*>[\s\S]*?<\/div>/gi, '')
-      .replace(/<div[^>]*style="[^"]*cursor:[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
-      .replace(/<div[^>]*style="[^"]*position:\s*absolute[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
-
-    // Remove duplicate IDs (safety)
-    const ids = new Set<string>();
-    cleanHtml = cleanHtml.replace(/<(h[1-6]|p|div)[^>]*id="([^"]+)"[^>]*>[\s\S]*?<\/\1>/gi, (m, tg, id) => {
-      if (ids.has(id)) return '';
-      ids.add(id); return m;
-    });
-
-    // Update state and trigger save if changed
-    if (cleanHtml !== currentSlideHtml) {
-      setSaveAttempts(prev => prev + 1);
-      console.log('Updating slide HTML (attempt #' + (saveAttempts + 1) + ')');
       setCurrentSlideHtml(cleanHtml);
-      
-      // Auto-save after a delay
-      setTimeout(() => {
-        try {
-          console.log('Auto-saving slide changes');
-          const updatedSlide = {
-            ...slide,
-            html: cleanHtml,
-            updatedAt: new Date()
-          };
-          onSave(updatedSlide, false); // Don't close modal for auto-save
-          console.log('Auto-save completed successfully');
-        } catch (saveError) {
-          console.error('=== ERROR DURING AUTO-SAVE (MIGHT CRASH MODAL) ===');
-          console.error('Save error:', saveError);
-        }
-      }, 500); // Faster auto-save
-    } else {
-      console.log('HTML did not change - no update needed (attempt #' + (saveAttempts + 1) + ')');
-      console.log('Current HTML:', currentSlideHtml);
-      console.log('Expected HTML:', cleanHtml);
+
+      // Persist via onSave
+      const updatedSlide: ISlide = {
+        ...slide,
+        html: cleanHtml,
+        updatedAt: new Date()
+      };
+      onSave(updatedSlide, false);
+      console.log('Slide HTML saved (length:', cleanHtml.length, ')');
+
+    } catch (err) {
+      console.error('Error during text edit save', err);
     }
-    
-    console.log('=== TEXT EDIT COMPLETE ===');
-  } catch (err) {
-    console.error('=== ERROR DURING TEXT EDIT ===', err);
-  }
-};
+  };
 
 // Add new text box function
 const handleAddTextBox = () => {
@@ -355,25 +393,18 @@ const handleAddTextBox = () => {
       console.log('Adding new element to HTML:', newElementHtml);
       console.log('Updated HTML length:', updatedHtml.length);
       
-      // Update the state - this will cause React to re-render
+      // Update the state immediately - this ensures the element is in the HTML for handleTextEdit
       setCurrentSlideHtml(updatedHtml);
       
-      // Wait for React to re-render, then find and click the new element
+      // Also add the element directly to the DOM so it's immediately interactive
+      // This creates a temporary state where the element exists in both the DOM and the HTML state
+      slideContent.appendChild(newTextElement);
+      
+      // Make it immediately editable
       setTimeout(() => {
-        const renderedElement = slideContent.querySelector(`#${newTextElement.id}`);
-        if (renderedElement) {
-          (renderedElement as HTMLElement).click();
-          console.log('Triggered click on newly rendered text element');
-        } else {
-          console.error('Could not find newly rendered element with ID:', newTextElement.id);
-          // Fallback: try to find by text content
-          const fallbackElement = slideContent.querySelector('h2');
-          if (fallbackElement && fallbackElement.textContent === 'TEXT') {
-            (fallbackElement as HTMLElement).click();
-            console.log('Used fallback click method');
-          }
-        }
-      }, 300); // Longer delay to ensure React has time to re-render
+        newTextElement.click();
+        console.log('Triggered click on new text element for immediate editing');
+      }, 100);
       
     } else {
       console.error('Could not find slide content container');
@@ -384,10 +415,285 @@ const handleAddTextBox = () => {
   }
 };
 
-  return (
-    <div className={styles.backdrop} onClick={handleBackdropClick}>
-      <div className={styles.modal}>
-        {/* Close Button */}
+// Media Library handlers
+const handleOpenMediaLibrary = () => {
+  setIsMediaLibraryOpen(true);
+};
+
+const handleCloseMediaLibrary = () => {
+  setIsMediaLibraryOpen(false);
+};
+
+const handleSelectMedia = (media: any) => {
+  console.log('Selected media:', media);
+  // Add image to slide or set as background based on context
+  if (media.type === 'image') {
+    if (isSelectingBackground) {
+      handleSetBackground(media.url);
+      setIsSelectingBackground(false);
+    } else {
+      handleAddImage(media.url, media.name);
+    }
+  }
+  setIsMediaLibraryOpen(false);
+};
+
+// Font and styling handlers
+const handleFontFamilyChange = (fontFamily: string) => {
+  const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
+  if (selectedElement) {
+    selectedElement.style.fontFamily = fontFamily;
+    saveElementState();
+  }
+};
+
+const handleFontSizeChange = (fontSize: string) => {
+  const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
+  if (selectedElement && fontSize && parseInt(fontSize) > 0) {
+    // Remove any existing handles before making changes
+    const existingHandles = document.querySelectorAll('[data-handle-name], [data-handle-type], [data-element-id]');
+    existingHandles.forEach(handle => {
+      if (handle.parentNode) {
+        handle.parentNode.removeChild(handle);
+      }
+    });
+    
+    selectedElement.style.fontSize = `${fontSize}px`;
+    
+    // Force immediate save to prevent ghost elements
+    setTimeout(() => {
+      const slideContentEl = document.querySelector('[data-slide-id="modal-editor"]');
+      if (slideContentEl) {
+        const cloned = slideContentEl.cloneNode(true) as HTMLElement;
+        cloned.querySelectorAll('[data-handle-name], [data-handle-type], [data-element-id]').forEach(h => h.remove());
+        const cleanHtml = cloned.innerHTML;
+        setCurrentSlideHtml(cleanHtml);
+        
+        const updatedSlide = {
+          ...slide,
+          html: cleanHtml,
+          updatedAt: new Date()
+        };
+        onSave(updatedSlide, false);
+      }
+    }, 50);
+  }
+};
+
+const handleColorChange = (color: string) => {
+  const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
+  if (selectedElement) {
+    selectedElement.style.color = color;
+    saveElementState();
+  }
+};
+
+const handleBoldToggle = () => {
+  const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
+  if (selectedElement) {
+    const isBold = selectedElement.style.fontWeight === 'bold';
+    selectedElement.style.fontWeight = isBold ? 'normal' : 'bold';
+    saveElementState();
+  }
+};
+
+const handleItalicToggle = () => {
+  const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
+  if (selectedElement) {
+    const isItalic = selectedElement.style.fontStyle === 'italic';
+    selectedElement.style.fontStyle = isItalic ? 'normal' : 'italic';
+    saveElementState();
+  }
+};
+
+// Media handlers
+const handleAddImage = (imageUrl: string, imageName: string) => {
+  const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
+  if (slideContent) {
+    const imgElement = document.createElement('img');
+    imgElement.src = imageUrl;
+    imgElement.alt = imageName;
+    imgElement.style.position = 'absolute';
+    imgElement.style.left = '50%';
+    imgElement.style.top = '50%';
+    imgElement.style.transform = 'translate(-50%, -50%)';
+    imgElement.style.maxWidth = '80%';
+    imgElement.style.maxHeight = '80%';
+    imgElement.style.cursor = 'pointer';
+    imgElement.style.zIndex = '10';
+    
+    slideContent.appendChild(imgElement);
+    
+    // Update HTML state
+    const newImageHtml = imgElement.outerHTML;
+    setCurrentSlideHtml(prev => prev + newImageHtml);
+  }
+};
+
+const handleAddYouTubeVideo = () => {
+  const videoUrl = prompt('Enter YouTube video URL:');
+  if (videoUrl) {
+    const videoId = extractYouTubeId(videoUrl);
+    if (videoId) {
+      const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
+      if (slideContent) {
+        const iframeElement = document.createElement('iframe');
+        iframeElement.src = `https://www.youtube.com/embed/${videoId}?autoplay=0`;
+        iframeElement.style.position = 'absolute';
+        iframeElement.style.left = '50%';
+        iframeElement.style.top = '50%';
+        iframeElement.style.transform = 'translate(-50%, -50%)';
+        iframeElement.style.width = '560px';
+        iframeElement.style.height = '315px';
+        iframeElement.style.border = 'none';
+        iframeElement.style.zIndex = '10';
+        iframeElement.style.aspectRatio = '16/9';
+        iframeElement.style.objectFit = 'contain';
+        
+        slideContent.appendChild(iframeElement);
+        
+        // Update HTML state
+        const newVideoHtml = iframeElement.outerHTML;
+        setCurrentSlideHtml(prev => prev + newVideoHtml);
+      }
+    } else {
+      alert('Invalid YouTube URL');
+    }
+  }
+};
+
+const handleRotateImage = () => {
+  const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
+  if (selectedElement && selectedElement.tagName === 'IMG') {
+    const imgElement = selectedElement as HTMLImageElement;
+    const currentRotation = getCurrentRotation(selectedElement);
+    const newRotation = currentRotation + 90;
+    selectedElement.style.transform = `translate(-50%, -50%) rotate(${newRotation}deg)`;
+    handleTextEdit(selectedElement, imgElement.alt || '');
+  }
+};
+
+// Helper functions
+const extractYouTubeId = (url: string): string | null => {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+};
+
+const getCurrentRotation = (element: HTMLElement): number => {
+  const transform = element.style.transform;
+  const match = transform.match(/rotate\((\d+)deg\)/);
+  return match ? parseInt(match[1]) : 0;
+};
+
+// Background handlers
+const applyBackgroundStyle = (imageUrl: string | null) => {
+  const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
+  if (!slideContent) return;
+  const slideContainer = slideContent.parentElement as HTMLElement | null;
+  if (!slideContainer) return;
+  if (imageUrl) {
+    slideContainer.style.backgroundImage = `url(${imageUrl})`;
+    slideContainer.style.backgroundSize = 'contain';
+    slideContainer.style.backgroundPosition = 'center';
+    slideContainer.style.backgroundRepeat = 'no-repeat';
+  } else {
+    slideContainer.style.backgroundImage = '';
+    slideContainer.style.backgroundSize = '';
+    slideContainer.style.backgroundPosition = '';
+    slideContainer.style.backgroundRepeat = '';
+  }
+};
+
+const commentRegex = /<!--BACKGROUND:(.*?)-->/i;
+
+const handleAddBackground = () => {
+  setIsSelectingBackground(true);
+  setIsMediaLibraryOpen(true);
+};
+
+const handleSetBackground = (imageUrl: string) => {
+  // Remove existing BACKGROUND comment if present
+  let newHtml = currentSlideHtml.replace(commentRegex, '');
+  // Prepend new BACKGROUND comment
+  newHtml = `<!--BACKGROUND:${imageUrl}-->` + newHtml;
+  setCurrentSlideHtml(newHtml);
+
+  // Apply CSS background immediately
+  applyBackgroundStyle(imageUrl);
+
+  // Save slide
+  onSave({ ...slide, html: newHtml, updatedAt: new Date() }, false);
+  setHasBackground(true);
+};
+
+const handleRemoveBackground = () => {
+  const newHtml = currentSlideHtml.replace(commentRegex, '');
+  setCurrentSlideHtml(newHtml);
+
+  // Clear CSS background
+  applyBackgroundStyle(null);
+
+  onSave({ ...slide, html: newHtml, updatedAt: new Date() }, false);
+  setHasBackground(false);
+};
+
+// Delete selected element function
+const handleDeleteSelected = () => {
+  const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
+  if (selectedElement) {
+    console.log('Deleting selected element via toolbar:', selectedElement.tagName);
+    
+    // Remove the element from DOM
+    if (selectedElement.parentNode) {
+      selectedElement.parentNode.removeChild(selectedElement);
+    }
+    
+    // Clean up any handles associated with this element
+    const existingHandles = document.querySelectorAll('[data-handle-name], [data-handle-type], [data-element-id]');
+    existingHandles.forEach(handle => {
+      if (handle.parentNode) {
+        handle.parentNode.removeChild(handle);
+      }
+    });
+    
+    // Save the updated state
+    saveElementState();
+  }
+};
+
+// Helper function to save element state without ghost boxes
+const saveElementState = () => {
+  // Remove any existing handles before saving
+  const existingHandles = document.querySelectorAll('[data-handle-name], [data-handle-type], [data-element-id]');
+  existingHandles.forEach(handle => {
+    if (handle.parentNode) {
+      handle.parentNode.removeChild(handle);
+    }
+  });
+  
+  setTimeout(() => {
+    const slideContentEl = document.querySelector('[data-slide-id="modal-editor"]');
+    if (slideContentEl) {
+      const cloned = slideContentEl.cloneNode(true) as HTMLElement;
+      cloned.querySelectorAll('[data-handle-name], [data-handle-type], [data-element-id]').forEach(h => h.remove());
+      const cleanHtml = cloned.innerHTML;
+      setCurrentSlideHtml(cleanHtml);
+      
+      const updatedSlide = {
+        ...slide,
+        html: cleanHtml,
+        updatedAt: new Date()
+      };
+      onSave(updatedSlide, false);
+    }
+  }, 50);
+};
+
+  const editorContent = (
+    <div>
+      {/* Close Button - only show in modal mode */}
+      {!isEmbedded && (
         <button 
           className={styles.closeButton}
           onClick={handleClose}
@@ -395,6 +701,7 @@ const handleAddTextBox = () => {
         >
           ×
         </button>
+      )}
 
 
 
@@ -410,10 +717,15 @@ const handleAddTextBox = () => {
             >
               T+
             </button>
-            <select className={styles.toolSelect} title="Font Family">
-              <option>Arial</option>
-              <option>Times</option>
-              <option>Helvetica</option>
+            <select 
+              className={styles.toolSelect} 
+              title="Font Family"
+              onChange={(e) => handleFontFamilyChange(e.target.value)}
+            >
+              <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</option>
+              <option value="Futura, 'Trebuchet MS', Arial, sans-serif">Futura</option>
+              <option value="'Montserrat', sans-serif">Montserrat</option>
+              <option value="Arial, Helvetica, sans-serif">Arial</option>
             </select>
             <input 
               type="number" 
@@ -421,39 +733,55 @@ const handleAddTextBox = () => {
               placeholder="24" 
               title="Font Size"
               min="8"
-              max="200"
+              max="500"
+              onChange={(e) => handleFontSizeChange(e.target.value)}
             />
             <input 
               type="color" 
               className={styles.colorPicker} 
               defaultValue="#ffffff"
               title="Text Color"
+              onChange={(e) => handleColorChange(e.target.value)}
             />
-            <button className={styles.toolButton} title="Bold">
+            <button 
+              className={styles.toolButton} 
+              title="Bold"
+              onClick={handleBoldToggle}
+            >
               <strong>B</strong>
             </button>
-            <button className={styles.toolButton} title="Italic">
+            <button 
+              className={styles.toolButton} 
+              title="Italic"
+              onClick={handleItalicToggle}
+            >
               <em>I</em>
             </button>
           </div>
 
-          {/* Media Tools */}
+          {/* Other Tools */}
           <div className={styles.toolGroup}>
-            <span className={styles.groupLabel}>Media</span>
-            <button className={styles.toolButton} title="Add Image">
-              🖼️
+            <button 
+              className={styles.toolButton} 
+              title="My Media Library" 
+              onClick={handleOpenMediaLibrary}
+            >
+              Media Library
             </button>
-            <button className={styles.toolButton} title="Add YouTube Video">
-              📹
+            <button 
+              className={styles.toolButton} 
+              title={hasBackground ? "Remove Background" : "Add Background"}
+              onClick={hasBackground ? handleRemoveBackground : handleAddBackground}
+            >
+              {hasBackground ? "Remove Background" : "Add Background"}
             </button>
-            <button className={styles.toolButton} title="Rotate Image">
-              🔄
+            <button 
+              className={styles.toolButton} 
+              title="Add YouTube Video"
+              onClick={handleAddYouTubeVideo}
+            >
+              Add Video
             </button>
-          </div>
-
-          {/* Element Tools */}
-          <div className={styles.toolGroup}>
-            <span className={styles.groupLabel}>Element</span>
             <button 
               className={styles.toolButton} 
               title="Save Positions"
@@ -464,37 +792,45 @@ const handleAddTextBox = () => {
                   const textElements = slideContent.querySelectorAll('h1, h2, h3, p, div');
                   textElements.forEach((el) => {
                     const htmlEl = el as HTMLElement;
-                                         if (htmlEl.style.transform) {
-                       // Trigger save with current text and position (auto-save, don't close modal)
-                       handleTextEdit(htmlEl, htmlEl.textContent?.replace(/⋮⋮/g, '').trim() || '');
-                     }
+                    if (htmlEl.style.transform) {
+                      // Trigger save with current text and position (auto-save, don't close modal)
+                      handleTextEdit(htmlEl, htmlEl.textContent?.replace(/⋮⋮/g, '').trim() || '');
+                    }
                   });
                 }
               }}
             >
-              💾
+              Save
             </button>
             <button 
               className={styles.toolButton} 
-              title="Reset Position"
+              title="Delete Selected (or press Delete key)"
+              onClick={handleDeleteSelected}
+            >
+              Delete
+            </button>
+            <button 
+              className={styles.toolButton} 
+              title="Move Layer Forward"
               onClick={() => {
-                // Reset all text element positions
-                const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
-                if (slideContent) {
-                  const textElements = slideContent.querySelectorAll('h1, h2, h3, p, div');
-                  textElements.forEach((el) => {
-                    (el as HTMLElement).style.transform = '';
-                  });
-                }
+                console.log('Layer Forward button clicked!');
+                handleLayerForward();
               }}
             >
-              🎯
+              Layer Forward
             </button>
-            <button className={styles.toolButton} title="Delete Selected">
-              🗑️
+            <button 
+              className={styles.toolButton} 
+              title="Move Layer Back"
+              onClick={() => {
+                console.log('Layer Back button clicked!');
+                handleLayerBack();
+              }}
+            >
+              Layer Back
             </button>
             <button className={styles.toolButton} title="Duplicate Selected">
-              📋
+              Duplicate
             </button>
           </div>
         </div>
@@ -513,6 +849,30 @@ const handleAddTextBox = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* My Media Library Modal */}
+      <MyMediaLibrary
+        isOpen={isMediaLibraryOpen}
+        onClose={handleCloseMediaLibrary}
+        onSelectMedia={handleSelectMedia}
+      />
+    </div>
+  );
+
+  // Return embedded or modal version
+  if (isEmbedded) {
+    return (
+      <div className={`${styles.modal} ${styles.embedded}`}>
+        {editorContent}
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.backdrop} onClick={handleBackdropClick}>
+      <div className={styles.modal}>
+        {editorContent}
       </div>
     </div>
   );

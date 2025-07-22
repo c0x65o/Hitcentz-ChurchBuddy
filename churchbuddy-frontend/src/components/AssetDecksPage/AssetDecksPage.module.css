@@ -1,0 +1,198 @@
+.assetDecksPage {
+  display: flex;
+  height: 100vh;
+  background-color: #1a1a1a;
+  color: white;
+}
+
+/* Left Sidebar - Asset Decks List */
+.leftSidebar {
+  width: 250px;
+  background-color: #2a2a2a;
+  border-right: 1px solid #444;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebarHeader {
+  padding: 20px;
+  border-bottom: 1px solid #444;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebarHeader h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.newDeckButton {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.newDeckButton:hover {
+  background-color: #0056b3;
+}
+
+.decksList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.deckItem {
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border: 1px solid transparent;
+}
+
+.deckItem:hover {
+  background-color: #3a3a3a;
+}
+
+.deckItem.active {
+  background-color: #007bff;
+  border-color: #0056b3;
+}
+
+.deckName {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.deckInfo {
+  font-size: 12px;
+  color: #ccc;
+}
+
+/* Center Workspace - Slide Editor */
+.centerWorkspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.workspaceHeader {
+  padding: 20px;
+  border-bottom: 1px solid #444;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #2a2a2a;
+}
+
+.workspaceHeader h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.addToDeckButton {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.addToDeckButton:hover:not(:disabled) {
+  background-color: #1e7e34;
+}
+
+.addToDeckButton:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.editorContainer {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Right Sidebar - Slide Thumbnails */
+.rightSidebar {
+  width: 300px;
+  background-color: #2a2a2a;
+  border-left: 1px solid #444;
+  display: flex;
+  flex-direction: column;
+}
+
+.rightSidebar .sidebarHeader {
+  padding: 20px;
+  border-bottom: 1px solid #444;
+}
+
+.rightSidebar .sidebarHeader h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.slideCount {
+  font-size: 12px;
+  color: #ccc;
+  margin-top: 4px;
+}
+
+.thumbnailContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .leftSidebar {
+    width: 200px;
+  }
+  
+  .rightSidebar {
+    width: 250px;
+  }
+}
+
+@media (max-width: 768px) {
+  .assetDecksPage {
+    flex-direction: column;
+  }
+  
+  .leftSidebar,
+  .rightSidebar {
+    width: 100%;
+    height: auto;
+  }
+  
+  .leftSidebar {
+    order: 1;
+  }
+  
+  .centerWorkspace {
+    order: 2;
+    flex: 1;
+  }
+  
+  .rightSidebar {
+    order: 3;
+  }
+} 

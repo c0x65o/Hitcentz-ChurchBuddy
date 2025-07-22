@@ -17,13 +17,34 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
   const [fontSize, setFontSize] = useState(0); // Start with 0 to prevent flash
   const [scale, setScale] = useState(1);
 
+  // Apply background from HTML comment
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const commentRegex = /<!--BACKGROUND:(.*?)-->/i;
+    const bgMatch = slide.html.match(commentRegex);
+    const bgUrl = bgMatch ? bgMatch[1] : null;
+    
+    if (bgUrl) {
+      containerRef.current.style.backgroundImage = `url(${bgUrl})`;
+      containerRef.current.style.backgroundSize = 'contain';
+      containerRef.current.style.backgroundPosition = 'center';
+      containerRef.current.style.backgroundRepeat = 'no-repeat';
+    } else {
+      containerRef.current.style.backgroundImage = '';
+      containerRef.current.style.backgroundSize = '';
+      containerRef.current.style.backgroundPosition = '';
+      containerRef.current.style.backgroundRepeat = '';
+    }
+  }, [slide.html]);
+
   // Separate useEffect for edit mode
   useEffect(() => {
     if (!editMode || !contentRef.current || fontSize === 0) return; // Wait for font size to be calculated
 
     // Small delay to ensure DOM is fully rendered
     const timer = setTimeout(() => {
-      const textElements = contentRef.current!.querySelectorAll('h1, h2, h3, p, div');
+      const textElements = contentRef.current!.querySelectorAll('h1, h2, h3, p, div, img, iframe');
       const cleanupFunctions: (() => void)[] = [];
     
     textElements.forEach((element) => {
@@ -109,8 +130,9 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         handle.style.border = '2px solid white';
         handle.style.borderRadius = '3px';
         handle.style.cursor = pos.cursor;
-        handle.style.opacity = '0.3';
+        handle.style.opacity = '0';
         handle.style.transition = 'opacity 0.2s ease';
+        handle.style.display = 'none';
         handle.style.zIndex = '1000';
         handle.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
         handle.contentEditable = 'false';
@@ -144,8 +166,9 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         handle.style.border = '1px solid white';
         handle.style.borderRadius = '3px';
         handle.style.cursor = pos.cursor;
-        handle.style.opacity = '0.3';
+        handle.style.opacity = '0';
         handle.style.transition = 'opacity 0.2s ease';
+        handle.style.display = 'none';
         handle.style.zIndex = '999';
         handle.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
         handle.contentEditable = 'false';
@@ -166,29 +189,35 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         console.log(`Created edge handle: ${pos.name}`);
       });
       
-      // Create drag handle (bottom center with icon) - larger and better positioned
+      // Create drag handle (bottom center with icon) - clean rectangular design
       const dragHandle = document.createElement('div');
       dragHandle.style.position = 'absolute';
-      dragHandle.style.bottom = '-40px';
-      dragHandle.style.left = '50%';
-      dragHandle.style.transform = 'translateX(-50%)';
-      dragHandle.style.width = '36px';
-      dragHandle.style.height = '36px';
+      dragHandle.style.bottom = '-35px';
+      dragHandle.style.left = '0px';
+      dragHandle.style.transform = 'translateX(-70px)';
+      dragHandle.style.width = '60px';
+      dragHandle.style.height = '24px';
       dragHandle.style.background = '#22c55e';
-      dragHandle.style.border = '3px solid white';
-      dragHandle.style.borderRadius = '50%';
+      dragHandle.style.border = '2px solid white';
+      dragHandle.style.borderRadius = '12px';
       dragHandle.style.cursor = 'move';
-      dragHandle.style.opacity = '0.3';
+      dragHandle.style.opacity = '0';
       dragHandle.style.transition = 'opacity 0.2s ease';
+      dragHandle.style.display = 'none';
       dragHandle.style.zIndex = '1001';
       dragHandle.style.display = 'flex';
       dragHandle.style.alignItems = 'center';
       dragHandle.style.justifyContent = 'center';
-      dragHandle.style.boxShadow = '0 3px 8px rgba(0,0,0,0.4)';
-      dragHandle.innerHTML = '✋';
-      dragHandle.style.fontSize = '18px';
+      dragHandle.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+      dragHandle.innerHTML = 'DRAG';
+      dragHandle.style.fontSize = '10px';
       dragHandle.style.color = 'white';
-      dragHandle.style.fontWeight = 'bold';
+      dragHandle.style.fontWeight = '600';
+      dragHandle.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+      dragHandle.style.letterSpacing = '0.5px';
+      dragHandle.style.textAlign = 'center';
+      dragHandle.style.lineHeight = '24px';
+      dragHandle.style.verticalAlign = 'middle';
       dragHandle.contentEditable = 'false';
       dragHandle.style.userSelect = 'none';
       dragHandle.style.pointerEvents = 'auto';
@@ -206,29 +235,35 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         htmlElement.appendChild(dragHandle);
       }
       
-      // Create rotate button (next to drag handle) - larger and better positioned
+      // Create rotate button (next to drag handle) - clean rectangular design
       const rotateButton = document.createElement('div');
       rotateButton.style.position = 'absolute';
-      rotateButton.style.bottom = '-40px';
-      rotateButton.style.left = '50%';
-      rotateButton.style.transform = 'translateX(calc(-50% + 50px))';
-      rotateButton.style.width = '36px';
-      rotateButton.style.height = '36px';
+      rotateButton.style.bottom = '-35px';
+      rotateButton.style.right = '0px';
+      rotateButton.style.transform = 'translateX(70px)';
+      rotateButton.style.width = '70px';
+      rotateButton.style.height = '24px';
       rotateButton.style.background = '#a855f7';
-      rotateButton.style.border = '3px solid white';
-      rotateButton.style.borderRadius = '50%';
+      rotateButton.style.border = '2px solid white';
+      rotateButton.style.borderRadius = '12px';
       rotateButton.style.cursor = 'pointer';
-      rotateButton.style.opacity = '0.3';
+      rotateButton.style.opacity = '0';
       rotateButton.style.transition = 'opacity 0.2s ease';
+      rotateButton.style.display = 'none';
       rotateButton.style.zIndex = '1001';
       rotateButton.style.display = 'flex';
       rotateButton.style.alignItems = 'center';
       rotateButton.style.justifyContent = 'center';
-      rotateButton.style.boxShadow = '0 3px 8px rgba(0,0,0,0.4)';
-      rotateButton.innerHTML = '🔄';
-      rotateButton.style.fontSize = '18px';
+      rotateButton.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+      rotateButton.innerHTML = 'ROTATE';
+      rotateButton.style.fontSize = '10px';
       rotateButton.style.color = 'white';
-      rotateButton.style.fontWeight = 'bold';
+      rotateButton.style.fontWeight = '600';
+      rotateButton.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+      rotateButton.style.letterSpacing = '0.5px';
+      rotateButton.style.textAlign = 'center';
+      rotateButton.style.lineHeight = '24px';
+      rotateButton.style.verticalAlign = 'middle';
       rotateButton.contentEditable = 'false';
       rotateButton.style.userSelect = 'none';
       rotateButton.style.pointerEvents = 'auto';
@@ -265,7 +300,12 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         const elementCenterX = elementLeft + elementWidth / 2;
         const elementCenterY = elementTop + elementHeight / 2;
         
-        // Position corner handles
+        // Get current rotation of the element
+        const currentTransform = htmlElement.style.transform || '';
+        const rotateMatch = currentTransform.match(/rotate\(([^)]+)deg\)/);
+        const currentRotation = rotateMatch ? parseFloat(rotateMatch[1]) : 0;
+        
+        // Position corner handles with rotation
         const cornerPositions = [
           { handle: allHandles.find(h => h.dataset.handleName === 'corner-tl'), x: elementLeft - 8, y: elementTop - 8 },
           { handle: allHandles.find(h => h.dataset.handleName === 'corner-tr'), x: elementLeft + elementWidth - 4, y: elementTop - 8 },
@@ -280,11 +320,11 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             pos.handle.style.top = `${pos.y}px`;
             pos.handle.style.right = 'auto';
             pos.handle.style.bottom = 'auto';
-            pos.handle.style.transform = 'none';
+            pos.handle.style.transform = `rotate(${currentRotation}deg)`;
           }
         });
         
-        // Position edge handles
+        // Position edge handles with rotation
         const edgePositions = [
           { handle: allHandles.find(h => h.dataset.handleName === 'edge-top'), x: elementCenterX, y: elementTop - 4 },
           { handle: allHandles.find(h => h.dataset.handleName === 'edge-bottom'), x: elementCenterX, y: elementTop + elementHeight - 4 },
@@ -299,52 +339,44 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             pos.handle.style.top = `${pos.y}px`;
             pos.handle.style.right = 'auto';
             pos.handle.style.bottom = 'auto';
-            pos.handle.style.transform = 'translate(-50%, -50%)';
+            pos.handle.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`;
           }
         });
         
-        // Position drag handle with smart placement
-        let dragX = elementCenterX;
-        let dragY = elementTop + elementHeight + 40;
+        // Position drag handle directly below element, left side
+        let dragX = elementLeft;
+        let dragY = elementTop + elementHeight + 10;
         
         // Move to top if no room at bottom
         if (dragY > containerRect.height - 20) {
           dragY = elementTop - 40;
         }
         
-        // Move to right if element is off left side
-        if (elementLeft < -elementWidth + 50) {
-          dragX = 50; // Keep handle visible on left side
-        }
-        // Move to left if element is off right side  
-        else if (elementLeft > containerRect.width - 50) {
-          dragX = containerRect.width - 50; // Keep handle visible on right side
+        // Ensure drag handle doesn't go off left edge
+        if (dragX < 20) {
+          dragX = 20;
         }
         
         dragHandle.style.position = 'absolute';
         dragHandle.style.left = `${dragX}px`;
         dragHandle.style.top = `${dragY}px`;
         dragHandle.style.bottom = 'auto';
-        dragHandle.style.transform = 'translate(-50%, -50%)';
+        dragHandle.style.transform = 'none';
         
-        // Position rotate button next to drag handle with smart placement
-        let rotateX = dragX + 50;
+        // Position rotate button directly below element, right side
+        let rotateX = elementLeft + elementWidth - 70; // 70px from right edge of element
         let rotateY = dragY;
         
-        // Move to left if near right edge
+        // Ensure rotate button doesn't go off right edge
         if (rotateX > containerRect.width - 20) {
-          rotateX = dragX - 50;
-        }
-        // Ensure it doesn't go off left edge
-        if (rotateX < 20) {
-          rotateX = 20;
+          rotateX = containerRect.width - 20;
         }
         
         rotateButton.style.position = 'absolute';
         rotateButton.style.left = `${rotateX}px`;
         rotateButton.style.top = `${rotateY}px`;
         rotateButton.style.bottom = 'auto';
-        rotateButton.style.transform = 'translate(-50%, -50%)';
+        rotateButton.style.transform = 'none';
         
         console.log('Positioned ALL handles (Canva-style):', { elementLeft, elementTop, elementWidth, elementHeight });
       };
@@ -395,14 +427,16 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         } else if (handleType === 'corner' || handleType === 'width' || handleType === 'height') {
           // Resize operations
           isResizing = true;
-          resizeType = handleType;
           resizeStartX = e.clientX;
           resizeStartY = e.clientY;
           currentWidth = originalWidth;
           currentHeight = originalHeight;
           
-          // Store which specific edge handle for proper resize direction
-          if (handleType === 'height') {
+          // Store which specific handle for proper resize direction
+          if (handleType === 'corner') {
+            // Use the specific corner handle name for proper scaling direction
+            resizeType = handleName || 'corner';
+          } else if (handleType === 'height') {
             if (handleName === 'edge-top') {
               resizeType = 'height-top';
             } else if (handleName === 'edge-bottom') {
@@ -457,6 +491,11 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         
         htmlElement.style.transform = transformString;
         console.log('Applied rotation:', transformString);
+        
+        // Immediately update handle positions after rotation
+        setTimeout(() => {
+          adjustHandlePositions();
+        }, 10);
       };
 
       const handleInteractionMove = (e: MouseEvent) => {
@@ -504,9 +543,28 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           const deltaX = (e.clientX - resizeStartX) / scale;
           const deltaY = (e.clientY - resizeStartY) / scale;
           
-          if (resizeType === 'corner') {
+          if (resizeType === 'corner' || resizeType === 'corner-tl' || resizeType === 'corner-tr' || resizeType === 'corner-bl' || resizeType === 'corner-br') {
             // Corner resize - scale entire element including font
-            const scaleFactor = Math.max(0.3, 1 + (deltaX + deltaY) / (originalWidth + originalHeight));
+            // Determine which corner is being dragged and adjust scaling accordingly
+            let scaleFactor = 1;
+            
+            if (resizeType === 'corner-tl') {
+              // Top-left: scale based on distance from bottom-right corner
+              scaleFactor = Math.max(0.3, 1 - (deltaX + deltaY) / (originalWidth + originalHeight));
+            } else if (resizeType === 'corner-tr') {
+              // Top-right: scale based on distance from bottom-left corner
+              scaleFactor = Math.max(0.3, 1 - (-deltaX + deltaY) / (originalWidth + originalHeight));
+            } else if (resizeType === 'corner-bl') {
+              // Bottom-left: scale based on distance from top-right corner
+              scaleFactor = Math.max(0.3, 1 - (deltaX - deltaY) / (originalWidth + originalHeight));
+            } else if (resizeType === 'corner-br') {
+              // Bottom-right: scale based on distance from top-left corner
+              scaleFactor = Math.max(0.3, 1 + (deltaX + deltaY) / (originalWidth + originalHeight));
+            } else {
+              // Fallback for generic corner resize
+              scaleFactor = Math.max(0.3, 1 + (deltaX + deltaY) / (originalWidth + originalHeight));
+            }
+            
             const newFontSize = Math.max(8, originalFontSize * scaleFactor);
             const newWidth = Math.max(30, originalWidth * scaleFactor);
             const newHeight = Math.max(20, originalHeight * scaleFactor);
@@ -515,7 +573,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             htmlElement.style.width = `${newWidth}px`;
             htmlElement.style.height = `${newHeight}px`;
             
-            console.log('Corner resize - Scale:', scaleFactor, 'Font:', newFontSize, 'Size:', newWidth, newHeight);
+            console.log('Corner resize - Type:', resizeType, 'Scale:', scaleFactor, 'Font:', newFontSize, 'Size:', newWidth, newHeight);
             
           } else if (resizeType === 'width-right') {
             // Right edge resize - increase width to the right
@@ -647,26 +705,41 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
       const handleTextClick = (e: Event) => {
         e.stopPropagation();
         
+        // Remove selection from all other elements
+        const allElements = contentRef.current!.querySelectorAll('h1, h2, h3, p, div, img, iframe');
+        allElements.forEach((el) => {
+          if (el !== htmlElement) {
+            (el as HTMLElement).classList.remove('selected');
+            (el as HTMLElement).blur();
+            (el as HTMLElement).contentEditable = 'false';
+          }
+        });
+        
+        // Add selection to this element
+        htmlElement.classList.add('selected');
+        
         const wasAlreadyEditable = htmlElement.contentEditable === 'true';
         
         // Add editing outline
         htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.5)';
         
-        // Make contentEditable
-        htmlElement.contentEditable = 'true';
-        
-        if (!wasAlreadyEditable) {
-          // Only select all text on first click to enter edit mode
-          htmlElement.focus();
-          const range = document.createRange();
-          range.selectNodeContents(htmlElement);
-          const selection = window.getSelection();
-          selection?.removeAllRanges();
-          selection?.addRange(range);
-          console.log('Entering edit mode - selected all text');
-        } else {
-          // If already editable, just focus but don't change selection
-          console.log('Already in edit mode - preserving cursor position');
+        // Make contentEditable for text elements
+        if (htmlElement.tagName.match(/^H[1-6]$|^P$|^DIV$/)) {
+          htmlElement.contentEditable = 'true';
+          
+          if (!wasAlreadyEditable) {
+            // Only select all text on first click to enter edit mode
+            htmlElement.focus();
+            const range = document.createRange();
+            range.selectNodeContents(htmlElement);
+            const selection = window.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+            console.log('Entering edit mode - selected all text');
+          } else {
+            // If already editable, just focus but don't change selection
+            console.log('Already in edit mode - preserving cursor position');
+          }
         }
       };
       
@@ -691,26 +764,44 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         }
       };
       
-      // Add hover effect to show all handles
+      // Function to show/hide handles based on selection
+      const updateHandleVisibility = () => {
+        const isSelected = htmlElement.classList.contains('selected');
+        console.log(`Element ${htmlElement.tagName} selected: ${isSelected}`);
+        
+        if (isSelected) {
+          // Show handles with full opacity when selected
+          htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.8)';
+          allHandles.forEach(handle => {
+            handle.style.display = 'block';
+            handle.style.opacity = '1';
+          });
+          adjustHandlePositions(); // Adjust positions when showing handles
+          console.log('Showing', allHandles.length, 'handles for selected element');
+        } else {
+          // Hide handles when not selected
+          htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.1)';
+          allHandles.forEach(handle => {
+            handle.style.display = 'none';
+            handle.style.opacity = '0';
+          });
+          console.log('Hiding handles for unselected element');
+        }
+      };
+      
+      // Initial visibility update
+      updateHandleVisibility();
+      
+      // Add hover effect for subtle outline
       const handleMouseEnter = () => {
-        console.log('Mouse enter on text element');
-        htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.3)';
-        allHandles.forEach(handle => {
-          handle.style.opacity = '1';
-        });
-        adjustHandlePositions(); // Adjust positions when showing handles
-        console.log('Showing', allHandles.length, 'handles');
+        if (!htmlElement.classList.contains('selected')) {
+          htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.3)';
+        }
       };
       
       const handleMouseLeave = () => {
-        console.log('Mouse leave on text element');
-        // Only hide handles if not actively interacting
-        if (!isDragging && !isResizing) {
+        if (!htmlElement.classList.contains('selected')) {
           htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.1)';
-          allHandles.forEach(handle => {
-            handle.style.opacity = '0.3'; // Keep partially visible for off-screen elements
-          });
-          console.log('Dimming handles');
         }
       };
       
@@ -726,6 +817,38 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
       htmlElement.addEventListener('mouseenter', handleMouseEnter);
       htmlElement.addEventListener('mouseleave', handleMouseLeave);
       
+      // Watch for selection changes
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+            updateHandleVisibility();
+          }
+        });
+      });
+      
+      observer.observe(htmlElement, {
+        attributes: true,
+        attributeFilter: ['class']
+      });
+      
+      // Also handle images and iframes for selection
+      if (htmlElement.tagName === 'IMG' || htmlElement.tagName === 'IFRAME') {
+        htmlElement.addEventListener('click', (e) => {
+          e.stopPropagation();
+          
+          // Remove selection from all other elements
+          const allElements = contentRef.current!.querySelectorAll('h1, h2, h3, p, div, img, iframe');
+          allElements.forEach((el) => {
+            if (el !== htmlElement) {
+              (el as HTMLElement).classList.remove('selected');
+            }
+          });
+          
+          // Add selection to this element
+          htmlElement.classList.add('selected');
+        });
+      }
+      
       // Store cleanup function
       cleanupFunctions.push(() => {
         console.log('Cleaning up element:', htmlElement.tagName);
@@ -739,6 +862,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         htmlElement.removeEventListener('blur', handleBlur);
         htmlElement.removeEventListener('mouseenter', handleMouseEnter);
         htmlElement.removeEventListener('mouseleave', handleMouseLeave);
+        observer.disconnect();
         document.removeEventListener('mousemove', handleInteractionMove);
         document.removeEventListener('mouseup', handleInteractionEnd);
         htmlElement.style.cursor = '';
@@ -886,19 +1010,19 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           transform: `scale(${scale})`,
           transformOrigin: 'top left'
         }}
-      >
-        <div className={styles.slideContent}>
-          <div 
-            ref={contentRef}
-            className={styles.slideText}
+    >
+      <div className={styles.slideContent}>
+        <div 
+          ref={contentRef}
+          className={styles.slideText}
             data-slide-content="true"
             data-slide-id={uniqueId}
             style={{ 
               fontSize: `${fontSize}px`,
               visibility: fontSize > 0 ? 'visible' : 'hidden'
             }}
-            dangerouslySetInnerHTML={{ __html: slide.html }}
-          />
+          dangerouslySetInnerHTML={{ __html: slide.html }}
+        />
         </div>
       </div>
     </div>
