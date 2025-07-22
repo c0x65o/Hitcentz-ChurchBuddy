@@ -86,7 +86,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     });
     
     // Capture all current element states and save them
-    const slideContent = document.querySelector('[data-slide-content="true"]');
+    const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
     if (slideContent) {
       const textElements = slideContent.querySelectorAll('h1, h2, h3, p, div');
       textElements.forEach((el) => {
@@ -343,21 +343,37 @@ const handleAddTextBox = () => {
     newTextElement.style.userSelect = 'none';
     newTextElement.style.zIndex = '10';
     
-    // Add the element to the slide content
-    const slideContent = document.querySelector('[data-slide-content="true"]');
+    // Add the element to the slide content - target the modal-specific one
+    const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
+    console.log('Found modal slide content:', slideContent);
+    
     if (slideContent) {
-      slideContent.appendChild(newTextElement);
-      console.log('New text element added to DOM');
+      // First, update the HTML state to include the new element
+      const newElementHtml = newTextElement.outerHTML;
+      const updatedHtml = currentSlideHtml + newElementHtml;
       
-      // Make it immediately editable by triggering a click
+      console.log('Adding new element to HTML:', newElementHtml);
+      console.log('Updated HTML length:', updatedHtml.length);
+      
+      // Update the state - this will cause React to re-render
+      setCurrentSlideHtml(updatedHtml);
+      
+      // Wait for React to re-render, then find and click the new element
       setTimeout(() => {
-        newTextElement.click();
-        console.log('Triggered click on new text element for immediate editing');
-      }, 100);
-      
-      // The new element will be saved automatically when handleTextEdit is called
-      // by the existing auto-save system, so we don't need separate saving logic here
-      console.log('New text element added - will be saved via existing auto-save system');
+        const renderedElement = slideContent.querySelector(`#${newTextElement.id}`);
+        if (renderedElement) {
+          (renderedElement as HTMLElement).click();
+          console.log('Triggered click on newly rendered text element');
+        } else {
+          console.error('Could not find newly rendered element with ID:', newTextElement.id);
+          // Fallback: try to find by text content
+          const fallbackElement = slideContent.querySelector('h2');
+          if (fallbackElement && fallbackElement.textContent === 'TEXT') {
+            (fallbackElement as HTMLElement).click();
+            console.log('Used fallback click method');
+          }
+        }
+      }, 300); // Longer delay to ensure React has time to re-render
       
     } else {
       console.error('Could not find slide content container');
@@ -443,7 +459,7 @@ const handleAddTextBox = () => {
               title="Save Positions"
               onClick={() => {
                 // Force save all current positions
-                const slideContent = document.querySelector('[data-slide-content="true"]');
+                const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
                 if (slideContent) {
                   const textElements = slideContent.querySelectorAll('h1, h2, h3, p, div');
                   textElements.forEach((el) => {
@@ -463,8 +479,8 @@ const handleAddTextBox = () => {
               title="Reset Position"
               onClick={() => {
                 // Reset all text element positions
-                      const slideContent = document.querySelector('[data-slide-content="true"]');
-      if (slideContent) {
+                const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
+                if (slideContent) {
                   const textElements = slideContent.querySelectorAll('h1, h2, h3, p, div');
                   textElements.forEach((el) => {
                     (el as HTMLElement).style.transform = '';
@@ -492,6 +508,7 @@ const handleAddTextBox = () => {
                 slide={{...slide, html: currentSlideHtml}} 
                 editMode={true}
                 onTextEdit={handleTextEdit}
+                uniqueId="modal-editor"
               />
             </div>
           </div>

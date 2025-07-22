@@ -7,9 +7,10 @@ interface SlideRendererProps {
   className?: string;
   editMode?: boolean;
   onTextEdit?: (element: HTMLElement, newText: string) => void;
+  uniqueId?: string;
 }
 
-const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMode = false, onTextEdit }) => {
+const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMode = false, onTextEdit, uniqueId }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -891,6 +892,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             ref={contentRef}
             className={styles.slideText}
             data-slide-content="true"
+            data-slide-id={uniqueId}
             style={{ 
               fontSize: `${fontSize}px`,
               visibility: fontSize > 0 ? 'visible' : 'hidden'
