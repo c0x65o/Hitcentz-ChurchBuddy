@@ -35,20 +35,20 @@ const SlideThumbnailList: React.FC<SlideThumbnailListProps> = ({
         {!collapsed && (
           <>
             <div className={styles.title}>{title}</div>
-            <div className={styles.scrollContainer}>
-              {slides.map((slide) => (
-                <div key={slide.id} className={styles.thumbnailWrapper}>
-                  <SlideThumbnail
-                    slide={slide}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                  />
-                </div>
-              ))}
-            </div>
+      <div className={styles.scrollContainer}>
+        {slides.map((slide) => (
+          <div key={slide.id} className={styles.thumbnailWrapper}>
+            <SlideThumbnail
+              slide={slide}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          </div>
+        ))}
+      </div>
           </>
         )}
-      </div>
+    </div>
     </>
   );
 };

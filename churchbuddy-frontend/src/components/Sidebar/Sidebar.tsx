@@ -37,28 +37,28 @@ const Sidebar: React.FC<SidebarProps> = ({ title, items, onSelectItem }) => {
       <aside
         className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''}`}
       >
-        {!collapsed && (
-          <div className={styles.content}>
-            <div className={styles.title}>{title}</div>
-            <SearchBar
-              value={query}
-              onChange={setQuery}
-              placeholder={`Search ${title.toLowerCase()}...`}
-            />
-            <ul className={styles.list}>
-              {filtered.map((item) => (
-                <li 
-                  key={item} 
-                  className={styles.item}
-                  onClick={() => handleItemClick(item)}
-                >
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </aside>
+      {!collapsed && (
+        <div className={styles.content}>
+          <div className={styles.title}>{title}</div>
+          <SearchBar
+            value={query}
+            onChange={setQuery}
+            placeholder={`Search ${title.toLowerCase()}...`}
+          />
+          <ul className={styles.list}>
+            {filtered.map((item) => (
+              <li 
+                key={item} 
+                className={styles.item}
+                onClick={() => handleItemClick(item)}
+              >
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </aside>
     </>
   );
 };

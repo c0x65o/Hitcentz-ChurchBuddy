@@ -6,11 +6,15 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-  box-sizing: border-box;
+  display: block;
+}
+
+.slideStage {
+  width: 1920px;
+  height: 1080px;
+  position: relative;
+  overflow: hidden;
+  /* Clip all content to slide boundaries like Canva */
 }
 
 .slideContent {
@@ -20,6 +24,9 @@
   justify-content: center;
   width: 100%;
   height: 100%;
+  padding: 40px;
+  box-sizing: border-box;
+  position: relative; /* Allow absolute positioning for draggable elements */
 }
 
 .slideText {
@@ -31,11 +38,16 @@
   text-align: center;
   /* Font size will be set inline by the component */
   /* Let content size itself naturally */
-  display: inline-block;
-  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
   max-height: 100%;
   white-space: normal;
-  word-break: keep-all;
+  word-break: normal;
+  opacity: 1;
+  min-height: 1em; /* Prevent height collapse when fontSize is 0 */
 }
 
 .slideText h1,
@@ -45,6 +57,10 @@
   margin: 0;
   font-weight: 600;
   /* Font size inherited from parent */
+  display: inline-block; /* Make text elements only as wide as their content */
+  text-align: center;
+  max-width: 100%; /* But don't exceed container width */
+  word-wrap: break-word; /* Allow wrapping for long words */
 }
 
 .slideText h2 {
