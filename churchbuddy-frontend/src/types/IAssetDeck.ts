@@ -1,10 +1,8 @@
 export interface IAssetDeck {
   id: string;
-  name: string;
-  listOfSlideIDs: string[];
-  autoplayBool?: boolean;
-  autoplayLoop?: boolean;
-  autoplayTimeInS?: number;
+  title: string;
+  description?: string;
+  slideIds: string[];
   createdAt: Date;
   updatedAt: Date;
 } 

@@ -4,13 +4,9 @@ import SlideRenderer from './components/SlideRenderer/SlideRenderer';
 import SlideThumbnailList from './components/SlideThumbnailList/SlideThumbnailList';
 import Sidebar from './components/Sidebar/Sidebar';
 import SlideEditorModal from './components/SlideEditorModal/SlideEditorModal';
-import { AssetDecksPage } from './components/AssetDecksPage/AssetDecksPage';
 import { ISlide } from './types/ISlide';
 
-type ActiveTab = 'presentation' | 'asset-decks' | 'songs' | 'sermons' | 'flows' | 'bulletin';
-
 function App() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('asset-decks');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSlide, setEditingSlide] = useState<ISlide | null>(null);
   const [currentSlide] = useState<ISlide>({
@@ -120,53 +116,52 @@ function App() {
     }
   };
 
-  const tabs = [
-    { id: 'presentation' as const, label: 'Presentation' },
-    { id: 'asset-decks' as const, label: 'Asset Decks' },
-    { id: 'songs' as const, label: 'Songs' },
-    { id: 'sermons' as const, label: 'Sermons' },
-    { id: 'flows' as const, label: 'Flows' },
-    { id: 'bulletin' as const, label: 'Bulletin' }
-  ];
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'asset-decks':
-        return <AssetDecksPage />;
-      case 'presentation':
-      case 'songs':
-      case 'sermons':
-      case 'flows':
-      case 'bulletin':
-      default:
-        return (
-          <div className="coming-soon">
-            <h2>{tabs.find(tab => tab.id === activeTab)?.label} Module</h2>
-            <p>Coming soon...</p>
-          </div>
-        );
-    }
-  };
-
   return (
     <div className="App">
-      {/* Tab Navigation */}
-      <div className="tab-navigation">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            className={`tab ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <header className="App-header">
+        <h1>ChurchBuddy</h1>
+        <p>Worship & Sermon Presentation Tool</p>
+      </header>
+      {/* Fixed Sidebar - Example with Songs */}
+      <Sidebar 
+        title="Songs"
+        items={[
+          'Amazing Grace',
+          'How Great Thou Art', 
+          'It Is Well',
+          'Great Is Thy Faithfulness',
+          'What A Friend We Have In Jesus'
+        ]}
+        onSelectItem={(song) => console.log('Selected song:', song)}
+      />
 
-      {/* Tab Content */}
-      <div className="tab-content">
-        {renderTabContent()}
-      </div>
+      <main className="App-main">
+
+
+        {/* Slide Preview */}
+        <div className="slide-preview">
+          <SlideRenderer slide={currentSlide} />
+        </div>
+
+        {/* Fixed Slide Thumbnails */}
+        <SlideThumbnailList
+          slides={slides}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          title="Slides"
+        />
+      </main>
+
+      {/* Test Modal */}
+      <SlideEditorModal 
+        slide={editingSlide || currentSlide}
+        isOpen={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingSlide(null);
+        }}
+        onSave={handleSaveSlide}
+      />
     </div>
   );
 }

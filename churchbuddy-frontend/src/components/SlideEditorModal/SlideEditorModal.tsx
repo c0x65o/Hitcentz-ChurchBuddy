@@ -9,15 +9,13 @@ interface SlideEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (updatedSlide: ISlide, shouldCloseModal?: boolean) => void;
-  isEmbedded?: boolean;
 }
 
 const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
   slide,
   isOpen,
   onClose,
-  onSave,
-  isEmbedded = false
+  onSave
 }) => {
   const [currentSlideHtml, setCurrentSlideHtml] = React.useState(slide.html);
   const [saveAttempts, setSaveAttempts] = React.useState(0);
@@ -308,7 +306,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     }
   }, [isOpen, slide.id]);
 
-  if (!isOpen && !isEmbedded) return null;
+  if (!isOpen) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     // Backdrop click disabled - only close button can close modal
@@ -690,10 +688,10 @@ const saveElementState = () => {
   }, 50);
 };
 
-  const editorContent = (
-    <div>
-      {/* Close Button - only show in modal mode */}
-      {!isEmbedded && (
+  return (
+    <div className={styles.backdrop} onClick={handleBackdropClick}>
+      <div className={styles.modal}>
+        {/* Close Button */}
         <button 
           className={styles.closeButton}
           onClick={handleClose}
@@ -701,7 +699,6 @@ const saveElementState = () => {
         >
           ×
         </button>
-      )}
 
 
 
@@ -857,23 +854,6 @@ const saveElementState = () => {
         onClose={handleCloseMediaLibrary}
         onSelectMedia={handleSelectMedia}
       />
-    </div>
-  );
-
-  // Return embedded or modal version
-  if (isEmbedded) {
-    return (
-      <div className={`${styles.modal} ${styles.embedded}`}>
-        {editorContent}
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.backdrop} onClick={handleBackdropClick}>
-      <div className={styles.modal}>
-        {editorContent}
-      </div>
     </div>
   );
 };
