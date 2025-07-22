@@ -3,13 +3,14 @@
   backdrop-filter: blur(10px);
   border-right: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 0 16px 16px 0;
-  height: calc(100vh - 200px); /* Match slide thumbnail list height area */
+  border-top-right-radius: 0;
+  height: calc(100vh - 200px);
   width: 300px;
   display: flex;
   flex-direction: column;
   position: fixed;
   left: 0;
-  top: 200px; /* Position below header, same as main content */
+  top: 200px;
   transition: transform 0.3s ease;
   overflow: hidden;
   z-index: 1000;
@@ -63,12 +64,8 @@
   text-transform: uppercase;
 }
 
-.sidebar {
-  border-top-right-radius: 0;
-}
-
 .content {
-  padding-top: 80px; /* leave space for toggle */
+  padding-top: 80px;
   display: flex;
   flex-direction: column;
   flex: 1;
