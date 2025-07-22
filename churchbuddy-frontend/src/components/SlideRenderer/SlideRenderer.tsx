@@ -890,6 +890,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           <div 
             ref={contentRef}
             className={styles.slideText}
+            data-slide-content="true"
             style={{ 
               fontSize: `${fontSize}px`,
               visibility: fontSize > 0 ? 'visible' : 'hidden'

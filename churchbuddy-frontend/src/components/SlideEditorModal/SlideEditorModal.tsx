@@ -86,7 +86,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     });
     
     // Capture all current element states and save them
-    const slideContent = document.querySelector('.SlideRenderer_slideText__DYHCt');
+    const slideContent = document.querySelector('[data-slide-content="true"]');
     if (slideContent) {
       const textElements = slideContent.querySelectorAll('h1, h2, h3, p, div');
       textElements.forEach((el) => {
@@ -344,7 +344,7 @@ const handleAddTextBox = () => {
     newTextElement.style.zIndex = '10';
     
     // Add the element to the slide content
-    const slideContent = document.querySelector('.SlideRenderer_slideText__DYHCt');
+    const slideContent = document.querySelector('[data-slide-content="true"]');
     if (slideContent) {
       slideContent.appendChild(newTextElement);
       console.log('New text element added to DOM');
@@ -355,26 +355,9 @@ const handleAddTextBox = () => {
         console.log('Triggered click on new text element for immediate editing');
       }, 100);
       
-      // Update the HTML state
-      const updatedHtml = currentSlideHtml + newTextElement.outerHTML;
-      setCurrentSlideHtml(updatedHtml);
-      console.log('Updated slide HTML with new text element');
-      
-      // Auto-save the changes
-      setTimeout(() => {
-        try {
-          console.log('Auto-saving new text element');
-          const updatedSlide = {
-            ...slide,
-            html: updatedHtml,
-            updatedAt: new Date()
-          };
-          onSave(updatedSlide, false); // Don't close modal for auto-save
-          console.log('Auto-save completed for new text element');
-        } catch (saveError) {
-          console.error('Error during auto-save of new text element:', saveError);
-        }
-      }, 200);
+      // The new element will be saved automatically when handleTextEdit is called
+      // by the existing auto-save system, so we don't need separate saving logic here
+      console.log('New text element added - will be saved via existing auto-save system');
       
     } else {
       console.error('Could not find slide content container');
@@ -404,7 +387,11 @@ const handleAddTextBox = () => {
           {/* Text Tools */}
           <div className={styles.toolGroup}>
             <span className={styles.groupLabel}>Text</span>
-            <button className={styles.toolButton} title="Add Text Box" onClick={handleAddTextBox}>
+            <button 
+              className={styles.toolButton} 
+              title="Add Text Box" 
+              onClick={handleAddTextBox}
+            >
               T+
             </button>
             <select className={styles.toolSelect} title="Font Family">
@@ -456,7 +443,7 @@ const handleAddTextBox = () => {
               title="Save Positions"
               onClick={() => {
                 // Force save all current positions
-                const slideContent = document.querySelector('.SlideRenderer_slideText__DYHCt');
+                const slideContent = document.querySelector('[data-slide-content="true"]');
                 if (slideContent) {
                   const textElements = slideContent.querySelectorAll('h1, h2, h3, p, div');
                   textElements.forEach((el) => {
@@ -476,8 +463,8 @@ const handleAddTextBox = () => {
               title="Reset Position"
               onClick={() => {
                 // Reset all text element positions
-                const slideContent = document.querySelector('.SlideRenderer_slideText__DYHCt');
-                if (slideContent) {
+                      const slideContent = document.querySelector('[data-slide-content="true"]');
+      if (slideContent) {
                   const textElements = slideContent.querySelectorAll('h1, h2, h3, p, div');
                   textElements.forEach((el) => {
                     (el as HTMLElement).style.transform = '';
