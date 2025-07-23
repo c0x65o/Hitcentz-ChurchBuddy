@@ -6,28 +6,37 @@ interface TextEditorProps {
   onSave?: (content: string) => void;
   placeholder?: string;
   title?: string;
+  storageKey?: string; // New prop for localStorage key
 }
 
 const TextEditor: React.FC<TextEditorProps> = ({ 
   content = '', 
   onSave, 
   placeholder = 'Start typing...',
-  title = 'Document'
+  title = 'Document',
+  storageKey = 'text-editor-content' // Default key
 }) => {
   const [text, setText] = useState(content);
   const [isEditing, setIsEditing] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
 
-  // Set initial content when component mounts or content prop changes
+  // Load content from localStorage on mount
   useEffect(() => {
-    if (editorRef.current) {
-      editorRef.current.textContent = content;
+    const savedContent = localStorage.getItem(storageKey);
+    if (savedContent && editorRef.current) {
+      editorRef.current.innerHTML = savedContent;
+      setText(savedContent);
+    } else if (content && editorRef.current) {
+      editorRef.current.innerHTML = content;
     }
-  }, [content]);
+  }, [content, storageKey]);
 
   const handleTextChange = (e: React.FormEvent<HTMLDivElement>) => {
-    const newText = e.currentTarget.textContent || '';
+    const newText = e.currentTarget.innerHTML || '';
     setText(newText);
+    
+    // Save to localStorage
+    localStorage.setItem(storageKey, newText);
     
     if (onSave) {
       // Debounced save
