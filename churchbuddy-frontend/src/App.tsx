@@ -4,11 +4,15 @@ import SlideRenderer from './components/SlideRenderer/SlideRenderer';
 import SlideThumbnailList from './components/SlideThumbnailList/SlideThumbnailList';
 import Sidebar from './components/Sidebar/Sidebar';
 import SlideEditorModal from './components/SlideEditorModal/SlideEditorModal';
+import TextEditor from './components/TextEditor/TextEditor';
 import { ISlide } from './types/ISlide';
 
 function App() {
+  const [activeModule, setActiveModule] = useState<'presentation' | 'songs' | 'sermons' | 'asset-decks'>('songs');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSlide, setEditingSlide] = useState<ISlide | null>(null);
+  const [songsContent, setSongsContent] = useState('');
+  const [sermonsContent, setSermonsContent] = useState('');
   const [currentSlide] = useState<ISlide>({
     id: '1',
     title: 'Welcome',
@@ -91,6 +95,16 @@ function App() {
     console.log('Delete slide:', slideId);
   };
 
+  const handleSongsSave = (content: string) => {
+    console.log('Saving songs content:', content);
+    setSongsContent(content);
+  };
+
+  const handleSermonsSave = (content: string) => {
+    console.log('Saving sermons content:', content);
+    setSermonsContent(content);
+  };
+
   const handleSaveSlide = (updatedSlide: ISlide, shouldCloseModal = true) => {
     console.log('Saving slide:', updatedSlide, 'shouldCloseModal:', shouldCloseModal);
     
@@ -118,39 +132,145 @@ function App() {
 
   return (
     <div className="App">
-      <header className="App-header">
-        <h1>ChurchBuddy</h1>
-        <p>Worship & Sermon Presentation Tool</p>
-      </header>
-      {/* Fixed Sidebar - Example with Songs */}
-      <Sidebar 
-        title="Songs"
-        items={[
-          'Amazing Grace',
-          'How Great Thou Art', 
-          'It Is Well',
-          'Great Is Thy Faithfulness',
-          'What A Friend We Have In Jesus'
-        ]}
-        onSelectItem={(song) => console.log('Selected song:', song)}
-      />
-
-      <main className="App-main">
-
-
-        {/* Slide Preview */}
-        <div className="slide-preview">
-          <SlideRenderer slide={currentSlide} />
+      {/* Module Navigation Tabs */}
+      <div className="module-tabs">
+        <div className="brand-section">
+          <div className="brand-logo">⛪</div>
+          <span className="brand-name">ChurchBuddy</span>
         </div>
+        <div className="tab-group">
+          <button 
+            className={`tab ${activeModule === 'presentation' ? 'active' : ''}`}
+            onClick={() => setActiveModule('presentation')}
+          >
+            Presentation
+          </button>
+        </div>
+        <div className="tab-group">
+          <button 
+            className={`tab ${activeModule === 'songs' ? 'active' : ''}`}
+            onClick={() => setActiveModule('songs')}
+          >
+            Songs
+          </button>
+          <button 
+            className={`tab ${activeModule === 'sermons' ? 'active' : ''}`}
+            onClick={() => setActiveModule('sermons')}
+          >
+            Sermons
+          </button>
+          <button 
+            className={`tab ${activeModule === 'asset-decks' ? 'active' : ''}`}
+            onClick={() => setActiveModule('asset-decks')}
+          >
+            Asset Decks
+          </button>
+        </div>
+      </div>
+      
+      {/* Conditional rendering based on active module */}
+      {activeModule === 'asset-decks' ? (
+        <>
+          {/* Module-aware Sidebar */}
+          <Sidebar 
+            activeModule={activeModule}
+            onSelectItem={(item) => console.log(`Selected ${activeModule}:`, item)}
+          />
 
-        {/* Fixed Slide Thumbnails */}
-        <SlideThumbnailList
-          slides={slides}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          title="Slides"
-        />
-      </main>
+          {/* Asset Decks: SlideEditor as primary workspace */}
+          <main className="App-main asset-decks-workspace">
+            <div className="asset-decks-editor">
+              <SlideEditorModal 
+                slide={currentSlide}
+                isOpen={true}
+                onClose={() => {}} // No-op since it's not a modal
+                onSave={handleSaveSlide}
+                isEmbedded={true}
+              />
+            </div>
+          </main>
+          
+          {/* SlideThumbnailList as popout overlay */}
+          <SlideThumbnailList
+            slides={slides}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            title="Asset Deck Slides"
+          />
+        </>
+      ) : activeModule === 'songs' ? (
+        <>
+          {/* Module-aware Sidebar */}
+          <Sidebar 
+            activeModule={activeModule}
+            onSelectItem={(item) => console.log(`Selected ${activeModule}:`, item)}
+          />
+
+          {/* Songs: TextEditor as primary workspace */}
+          <main className="App-main">
+            <div className="text-editor-workspace">
+              <TextEditor
+                content={songsContent}
+                onSave={handleSongsSave}
+                placeholder="Start writing your song lyrics..."
+                title="Song Editor"
+              />
+            </div>
+          </main>
+          {/* SlideThumbnailList as popout overlay for Songs */}
+          <SlideThumbnailList
+            slides={slides}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            title="Songs"
+          />
+        </>
+      ) : activeModule === 'sermons' ? (
+        <>
+          {/* Module-aware Sidebar */}
+          <Sidebar 
+            activeModule={activeModule}
+            onSelectItem={(item) => console.log(`Selected ${activeModule}:`, item)}
+          />
+
+          {/* Sermons: TextEditor as primary workspace */}
+          <main className="App-main">
+            <div className="text-editor-workspace">
+              <TextEditor
+                content={sermonsContent}
+                onSave={handleSermonsSave}
+                placeholder="Start writing your sermon notes..."
+                title="Sermon Editor"
+              />
+            </div>
+          </main>
+          {/* SlideThumbnailList as popout overlay for Sermons */}
+          <SlideThumbnailList
+            slides={slides}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            title="Sermons"
+          />
+        </>
+      ) : activeModule !== 'presentation' && (
+        <>
+          {/* Module-aware Sidebar */}
+          <Sidebar 
+            activeModule={activeModule}
+            onSelectItem={(item) => console.log(`Selected ${activeModule}:`, item)}
+          />
+
+          <main className="App-main">
+            {/* Fixed Slide Thumbnails */}
+            <SlideThumbnailList
+              slides={slides}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              title="Slides"
+            />
+          </main>
+        </>
+      )}
 
       {/* Test Modal */}
       <SlideEditorModal 

@@ -9,13 +9,15 @@ interface SlideEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (updatedSlide: ISlide, shouldCloseModal?: boolean) => void;
+  isEmbedded?: boolean;
 }
 
 const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
   slide,
   isOpen,
   onClose,
-  onSave
+  onSave,
+  isEmbedded = false
 }) => {
   const [currentSlideHtml, setCurrentSlideHtml] = React.useState(slide.html);
   const [saveAttempts, setSaveAttempts] = React.useState(0);
@@ -689,16 +691,18 @@ const saveElementState = () => {
 };
 
   return (
-    <div className={styles.backdrop} onClick={handleBackdropClick}>
-      <div className={styles.modal}>
-        {/* Close Button */}
-        <button 
-          className={styles.closeButton}
-          onClick={handleClose}
-          title="Close Editor"
-        >
-          ×
-        </button>
+    <div className={`${styles.backdrop} ${isEmbedded ? styles.embedded : ''}`} onClick={isEmbedded ? undefined : handleBackdropClick}>
+      <div className={`${styles.modal} ${isEmbedded ? styles.embeddedModal : ''}`}>
+        {/* Close Button - only show in modal mode */}
+        {!isEmbedded && (
+          <button 
+            className={styles.closeButton}
+            onClick={handleClose}
+            title="Close Editor"
+          >
+            ×
+          </button>
+        )}
 
 
 

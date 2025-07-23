@@ -600,12 +600,26 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             console.log('Height resize (bottom) - New height:', newHeight);
             
           } else if (resizeType === 'height-top') {
-            // Top edge resize - increase height upward
+            // Top edge resize - increase height upward and move element up
             const newHeight = Math.max(20, originalHeight - deltaY);
+            const heightDifference = originalHeight - newHeight;
+            
+            // Update height
             htmlElement.style.height = `${newHeight}px`;
             htmlElement.style.minHeight = '20px';
             htmlElement.style.maxHeight = 'none';
-            console.log('Height resize (top) - New height:', newHeight);
+            
+            // Move element up by the height difference
+            const currentTransform = htmlElement.style.transform;
+            const match = currentTransform.match(/translate\(([^,]+)px,\s*([^)]+)px\)/);
+            if (match) {
+              const currentX = parseFloat(match[1]);
+              const currentY = parseFloat(match[2]);
+              const newY = currentY - heightDifference;
+              htmlElement.style.transform = `translate(${currentX}px, ${newY}px)`;
+            }
+            
+            console.log('Height resize (top) - New height:', newHeight, 'Moved up by:', heightDifference);
             
           } else if (resizeType === 'width' || resizeType === 'height') {
             // Fallback for generic width/height (shouldn't happen now)

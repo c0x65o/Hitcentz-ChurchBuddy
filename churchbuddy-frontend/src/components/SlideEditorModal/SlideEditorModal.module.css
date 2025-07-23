@@ -28,6 +28,26 @@
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
 
+.embedded {
+  position: static;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.embeddedModal {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  backdrop-filter: none;
+  border: none;
+}
+
 .closeButton {
   position: absolute;
   top: 16px;
@@ -57,8 +77,8 @@
   align-items: center;
   gap: 24px;
   padding: 16px 24px;
-  background: rgba(255, 255, 255, 0.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   flex-wrap: wrap;
 }
 
@@ -67,9 +87,9 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .groupLabel {
@@ -82,7 +102,7 @@
 }
 
 .toolButton {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 6px;
   color: white;
