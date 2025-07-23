@@ -16,61 +16,70 @@
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
+  gap: 24px; /* Increased gap */
+  padding: 16px 24px; /* Increased padding */
+  background: transparent; /* Transparent background */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15); /* Modern border */
   flex-wrap: wrap;
 }
 
 .toolGroup {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 2px 4px;
-  background: white;
-  border-radius: 4px;
-  border: 1px solid #dee2e6;
+  gap: 8px; /* Consistent gap */
+  padding: 8px 16px; /* Consistent padding */
+  background: rgba(255, 255, 255, 0.08); /* Frosted glass background */
+  border-radius: 8px; /* More rounded corners */
+  border: 1px solid rgba(255, 255, 255, 0.15); /* Subtle border */
 }
 
 .toolButton {
-  background: transparent;
-  border: none;
-  border-radius: 3px;
-  color: #495057;
-  padding: 4px 6px;
-  font-size: 12px;
+  background: rgba(255, 255, 255, 0.12); /* Frosted glass button */
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border */
+  border-radius: 6px; /* Slightly more rounded */
+  color: white; /* White text */
+  padding: 6px 10px; /* Adjusted padding */
+  font-size: 14px; /* Larger font size */
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 24px;
-  height: 24px;
+  min-width: 32px; /* Increased min-width */
+  height: 32px; /* Increased height */
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .toolButton:hover {
-  background: #e9ecef;
-  color: #212529;
+  background: rgba(255, 255, 255, 0.2); /* Darker on hover */
+  border-color: rgba(255, 255, 255, 0.3); /* Darker border on hover */
+  transform: translateY(-1px); /* Slight lift effect */
 }
 
 .toolButton:active {
-  background: #dee2e6;
+  background: rgba(255, 255, 255, 0.25); /* Even darker on active */
+  transform: translateY(0);
 }
 
 .toolSelect {
-  background: transparent;
-  border: none;
-  color: #495057;
-  padding: 4px 8px;
-  font-size: 14px;
+  background: rgba(255, 255, 255, 0.1); /* Frosted glass select */
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border */
+  color: white; /* White text */
+  padding: 6px 8px; /* Adjusted padding */
+  font-size: 14px; /* Larger font size */
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 6px; /* More rounded */
   min-width: 60px;
+  height: 32px; /* Consistent height */
 }
 
 .toolSelect:hover {
-  background: #e9ecef;
+  background: rgba(255, 255, 255, 0.2); /* Darker on hover */
+  border-color: rgba(255, 255, 255, 0.3); /* Darker border on hover */
+}
+
+.toolSelect option {
+  background: #333; /* Dark background for options */
+  color: white; /* White text for options */
 }
 
 .editorArea {
@@ -100,6 +109,7 @@
   position: relative;
   margin-bottom: 50vh; /* Provide some buffer space at the bottom for typing */
   min-height: 1104px; /* Approximate 11.5 inches at 96 DPI */
+  text-align: left; /* Added for left alignment */
 }
 
 .editor {
