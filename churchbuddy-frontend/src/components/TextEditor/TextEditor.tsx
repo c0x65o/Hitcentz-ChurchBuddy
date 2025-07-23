@@ -23,11 +23,16 @@ const TextEditor: React.FC<TextEditorProps> = ({
   // Load content from localStorage on mount
   useEffect(() => {
     const savedContent = localStorage.getItem(storageKey);
-    if (savedContent && editorRef.current) {
-      editorRef.current.innerHTML = savedContent;
-      setText(savedContent);
-    } else if (content && editorRef.current) {
-      editorRef.current.innerHTML = content;
+    if (editorRef.current) {
+      if (savedContent) {
+        // Prioritize localStorage content
+        editorRef.current.innerHTML = savedContent;
+        setText(savedContent);
+      } else if (content) {
+        // Only use content prop if no localStorage content exists
+        editorRef.current.innerHTML = content;
+        setText(content);
+      }
     }
   }, [content, storageKey]);
 

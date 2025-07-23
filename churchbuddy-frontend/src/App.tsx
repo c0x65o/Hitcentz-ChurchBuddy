@@ -210,7 +210,6 @@ function App() {
           <main className="App-main">
             <div className="text-editor-workspace">
               <TextEditor
-                content={songsContent}
                 onSave={handleSongsSave}
                 placeholder="Start writing your song lyrics..."
                 title="Song Editor"
@@ -238,7 +237,6 @@ function App() {
           <main className="App-main">
             <div className="text-editor-workspace">
               <TextEditor
-                content={sermonsContent}
                 onSave={handleSermonsSave}
                 placeholder="Start writing your sermon notes..."
                 title="Sermon Editor"
