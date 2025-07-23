@@ -214,6 +214,7 @@ function App() {
                 onSave={handleSongsSave}
                 placeholder="Start writing your song lyrics..."
                 title="Song Editor"
+                storageKey="songs-content"
               />
             </div>
           </main>
@@ -241,6 +242,7 @@ function App() {
                 onSave={handleSermonsSave}
                 placeholder="Start writing your sermon notes..."
                 title="Sermon Editor"
+                storageKey="sermons-content"
               />
             </div>
           </main>
