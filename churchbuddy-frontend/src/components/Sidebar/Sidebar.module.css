@@ -5,7 +5,7 @@
   border-radius: 0 16px 16px 0;
   border-top-right-radius: 0;
   height: calc(100vh - 80px);
-  width: 200px;
+  width: 300px;
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -18,13 +18,13 @@
 }
 
 .collapsed {
-  transform: translateX(-200px);
+  transform: translateX(-300px);
 }
 
 .toggle {
   position: fixed;
   top: 80px;
-  left: 200px;
+  left: 300px;
   width: 50px;
   height: 120px;
   border: none;
