@@ -8,20 +8,40 @@ interface TextEditorProps {
   title?: string;
 }
 
-const TextEditor: React.FC<TextEditorProps> = ({ 
-  content = '', 
-  onSave, 
+const TextEditor: React.FC<TextEditorProps> = ({
+  content = '',
+  onSave,
   placeholder = 'Start typing...',
   title = 'Document'
 }) => {
-  const [text, setText] = useState(content);
   const [isEditing, setIsEditing] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
 
+  // Effect to set initial content and cursor position
+  useEffect(() => {
+    if (editorRef.current) {
+      // Set initial HTML content
+      editorRef.current.innerHTML = content || '';
+
+      // Place cursor at the end of the content when loaded
+      const range = document.createRange();
+      const selection = window.getSelection();
+
+      // Select all contents and collapse to end to place cursor at the end
+      range.selectNodeContents(editorRef.current);
+      range.collapse(false); // Collapse to the end of the range
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      // Restore focus to the editor after setting content and cursor
+      editorRef.current.focus();
+    }
+  }, [content]); // Re-run when content prop changes
+
   const handleTextChange = (e: React.FormEvent<HTMLDivElement>) => {
-    const newText = e.currentTarget.textContent || '';
-    setText(newText);
-    
+    const newText = e.currentTarget.innerHTML || ''; // Use innerHTML to preserve formatting
+    // Do not setText(newText) here; let contentEditable manage its own state
+
     if (onSave) {
       // Debounced save
       clearTimeout((window as any).saveTimeout);
@@ -45,7 +65,7 @@ const TextEditor: React.FC<TextEditorProps> = ({
       e.preventDefault();
       document.execCommand('insertText', false, '  ');
     }
-    
+
     // Handle Enter key to add new lines
     if (e.key === 'Enter') {
       // The contentEditable will handle this automatically
@@ -70,7 +90,7 @@ const TextEditor: React.FC<TextEditorProps> = ({
             <u>U</u>
           </button>
         </div>
-        
+
         <div className={styles.toolGroup}>
           <select className={styles.toolSelect} defaultValue="16">
             <option value="12">12</option>
@@ -108,7 +128,8 @@ const TextEditor: React.FC<TextEditorProps> = ({
               onKeyDown={handleKeyDown}
               suppressContentEditableWarning={true}
             >
-              {text || placeholder}
+              {/* Content will be set by useEffect */}
+              {!content && placeholder && <span className={styles.placeholder}>{placeholder}</span>}
             </div>
           </div>
         </div>
