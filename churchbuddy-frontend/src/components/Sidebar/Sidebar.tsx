@@ -1,15 +1,20 @@
 import React, { useState, useMemo } from 'react';
 import styles from './Sidebar.module.css';
 import SearchBar from '../SearchBar/SearchBar';
+import { ISong } from '../../types/ISong';
 
 interface SidebarProps {
   /** Current active module */
   activeModule: 'presentation' | 'songs' | 'sermons' | 'asset-decks';
   /** Optional callback when an item is selected */
   onSelectItem?: (item: string) => void;
+  /** Optional callback when Make New is clicked */
+  onMakeNew?: () => void;
+  /** Optional custom songs list to override default */
+  customSongsList?: ISong[];
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeModule, onSelectItem }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeModule, onSelectItem, onMakeNew, customSongsList }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -19,7 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeModule, onSelectItem }) => {
       case 'songs':
         return {
           title: 'Songs',
-          items: [
+          items: customSongsList ? customSongsList.map(song => song.title) : [
             'Amazing Grace',
             'How Great Thou Art',
             'It Is Well',
@@ -68,7 +73,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeModule, onSelectItem }) => {
           placeholder: 'Search...'
         };
     }
-  }, [activeModule]);
+  }, [activeModule, customSongsList]);
 
   const filtered = moduleData.items.filter((item) =>
     item.toLowerCase().includes(query.toLowerCase())
@@ -100,7 +105,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeModule, onSelectItem }) => {
             onChange={setQuery}
             placeholder={moduleData.placeholder}
           />
-          <button className={styles.makeNewButton}>
+          <button className={styles.makeNewButton} onClick={onMakeNew}>
             + Make New
           </button>
           <ul className={styles.list}>

@@ -1,0 +1,8 @@
+export interface ISong {
+  id: string;
+  title: string;
+  description?: string;
+  slideIds: string[];
+  createdAt: Date;
+  updatedAt: Date;
+} 

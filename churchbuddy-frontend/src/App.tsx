@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar/Sidebar';
 import SlideEditorModal from './components/SlideEditorModal/SlideEditorModal';
 import TextEditor from './components/TextEditor/TextEditor';
 import { ISlide } from './types/ISlide';
+import { ISong } from './types/ISong';
 
 function App() {
   const [activeModule, setActiveModule] = useState<'presentation' | 'songs' | 'sermons' | 'asset-decks'>('songs');
@@ -13,6 +14,10 @@ function App() {
   const [editingSlide, setEditingSlide] = useState<ISlide | null>(null);
   const [songsContent, setSongsContent] = useState('');
   const [sermonsContent, setSermonsContent] = useState('');
+  const [showSongTitleModal, setShowSongTitleModal] = useState(false);
+  const [newSongTitle, setNewSongTitle] = useState('');
+  const [songsList, setSongsList] = useState<ISong[]>([]);
+  const [selectedSong, setSelectedSong] = useState<ISong | null>(null);
   const [currentSlide] = useState<ISlide>({
     id: '1',
     title: 'Welcome',
@@ -103,6 +108,41 @@ function App() {
   const handleSermonsSave = (content: string) => {
     console.log('Saving sermons content:', content);
     setSermonsContent(content);
+  };
+
+  const handleMakeNewSong = () => {
+    setShowSongTitleModal(true);
+  };
+
+  const handleSongSelect = (songTitle: string) => {
+    console.log('Selected song:', songTitle);
+    const song = songsList.find(s => s.title === songTitle);
+    setSelectedSong(song || null);
+  };
+
+  const handleCreateSong = () => {
+    if (newSongTitle.trim()) {
+      console.log('Creating new song:', newSongTitle);
+      
+      // Create a new song object
+      const newSong: ISong = {
+        id: `song-${Date.now()}`, // Simple ID generation
+        title: newSongTitle.trim(),
+        slideIds: [], // Empty slides array
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      // Add the new song to the songs list
+      setSongsList(prev => [...prev, newSong]);
+      
+      // Select the new song for editing
+      setSelectedSong(newSong);
+      
+      // Clear the modal
+      setShowSongTitleModal(false);
+      setNewSongTitle('');
+    }
   };
 
   const handleSaveSlide = (updatedSlide: ISlide, shouldCloseModal = true) => {
@@ -203,7 +243,9 @@ function App() {
           {/* Module-aware Sidebar */}
           <Sidebar 
             activeModule={activeModule}
-            onSelectItem={(item) => console.log(`Selected ${activeModule}:`, item)}
+            onSelectItem={handleSongSelect}
+            onMakeNew={handleMakeNewSong}
+            customSongsList={songsList}
           />
 
           {/* Songs: TextEditor as primary workspace */}
@@ -213,16 +255,16 @@ function App() {
                 onSave={handleSongsSave}
                 placeholder="Start writing your song lyrics..."
                 title="Song Editor"
-                storageKey="songs-content"
+                storageKey={selectedSong ? `song-${selectedSong.id}` : 'songs-content'}
               />
             </div>
           </main>
           {/* SlideThumbnailList as popout overlay for Songs */}
           <SlideThumbnailList
-            slides={slides}
+            slides={slides.filter(slide => selectedSong?.slideIds.includes(slide.id) || !selectedSong)}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            title="Songs"
+            title={selectedSong?.title || "Songs"}
           />
         </>
       ) : activeModule === 'sermons' ? (
@@ -282,6 +324,84 @@ function App() {
         }}
         onSave={handleSaveSlide}
       />
+
+      {/* Song Title Modal */}
+      {showSongTitleModal && (
+        <div className="modal-backdrop" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '16px',
+            padding: '32px',
+            minWidth: '400px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            <h2 style={{ color: 'white', margin: 0 }}>Create New Song</h2>
+            <input
+              type="text"
+              placeholder="Enter song title..."
+              value={newSongTitle}
+              onChange={(e) => setNewSongTitle(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleCreateSong()}
+              style={{
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: 'white',
+                fontSize: '16px',
+                outline: 'none'
+              }}
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowSongTitleModal(false);
+                  setNewSongTitle('');
+                }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: 'white',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateSong}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  cursor: 'pointer'
+                }}
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
