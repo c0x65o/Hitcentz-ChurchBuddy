@@ -109,7 +109,6 @@
   position: relative;
   margin-bottom: 50vh; /* Provide some buffer space at the bottom for typing */
   min-height: 1104px; /* Approximate 11.5 inches at 96 DPI */
-  text-align: left; /* Added for left alignment */
 }
 
 .editor {
