@@ -10,10 +10,11 @@ import CreateItemModal from './components/CreateItemModal/CreateItemModal';
 import { ISlide } from './types/ISlide';
 import { ISong } from './types/ISong';
 import { ISermon } from './types/ISermon';
+import { IAssetDeck } from './types/IAssetDeck';
 import apiService from './services/api';
 
 function App() {
-  const [activeModule, setActiveModule] = useState<'presentation' | 'songs' | 'sermons' | 'asset-decks'>('songs');
+  const [activeModule, setActiveModule] = useState<'presentation' | 'songs' | 'sermons' | 'asset-decks' | 'flows'>('songs');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSlide, setEditingSlide] = useState<ISlide | null>(null);
   const [songsContent, setSongsContent] = useState('');
@@ -29,6 +30,13 @@ function App() {
   const [itemsWithBackgrounds, setItemsWithBackgrounds] = useState<string[]>([]);
   const [backendConnected, setBackendConnected] = useState(false);
   const [isPreachMode, setIsPreachMode] = useState(false);
+  
+  // Asset Decks state
+  const [assetDecksList, setAssetDecksList] = useState<IAssetDeck[]>([]);
+  const [selectedAssetDeck, setSelectedAssetDeck] = useState<IAssetDeck | null>(null);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [showAssetDeckTitleModal, setShowAssetDeckTitleModal] = useState(false);
+  
   const [currentSlide] = useState<ISlide>({
     id: '1',
     title: 'Welcome',
@@ -654,6 +662,132 @@ function App() {
     }
   };
 
+  // Asset Decks handlers
+  const handleMakeNewAssetDeck = () => {
+    setShowAssetDeckTitleModal(true);
+  };
+
+  const handleAssetDeckSelect = (assetDeckTitle: string) => {
+    const assetDeck = assetDecksList.find(deck => deck.title === assetDeckTitle);
+    if (assetDeck) {
+      setSelectedAssetDeck(assetDeck);
+      setCurrentSlideIndex(0); // Start with first slide
+      
+      // Load the first slide if the deck has slides
+      if (assetDeck.slideIds.length > 0) {
+        const firstSlideId = assetDeck.slideIds[0];
+        const firstSlide = slides.find(s => s.id === firstSlideId);
+        if (firstSlide) {
+          setEditingSlide(firstSlide);
+        }
+      } else {
+        setEditingSlide(null); // Clear editing slide if deck is empty
+      }
+      
+      console.log('Selected asset deck:', assetDeck);
+    }
+  };
+
+  const handleCreateAssetDeck = (title: string) => {
+    // Create a new blank slide first
+    const newSlide: ISlide = {
+      id: `slide-${Date.now()}`,
+      title: 'New Asset',
+      html: '<h1>New Asset</h1>',
+      order: slides.length + 1,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    // Create the new asset deck
+    const newAssetDeck: IAssetDeck = {
+      id: `asset-deck-${Date.now()}`,
+      title,
+      slideIds: [newSlide.id], // Add the new slide to the deck immediately
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    // Update state
+    setSlides(prev => [...prev, newSlide]);
+    setAssetDecksList(prev => [...prev, newAssetDeck]);
+    setSelectedAssetDeck(newAssetDeck);
+    setCurrentSlideIndex(0);
+    setEditingSlide(newSlide); // Load the new slide into the editor
+    setShowAssetDeckTitleModal(false);
+    
+    console.log('Created new asset deck with initial slide:', newAssetDeck);
+  };
+
+  const handleAddToDeck = () => {
+    if (selectedAssetDeck && editingSlide) {
+      // Add the current editing slide to the selected asset deck
+      const updatedAssetDeck = {
+        ...selectedAssetDeck,
+        slideIds: [...selectedAssetDeck.slideIds, editingSlide.id],
+        updatedAt: new Date()
+      };
+      
+      setAssetDecksList(prev => prev.map(deck => 
+        deck.id === selectedAssetDeck.id ? updatedAssetDeck : deck
+      ));
+      setSelectedAssetDeck(updatedAssetDeck);
+      
+      console.log('Added slide to asset deck:', editingSlide.id);
+    }
+  };
+
+  const handleNewAsset = () => {
+    // Create a new blank slide
+    const newSlide: ISlide = {
+      id: `slide-${Date.now()}`,
+      title: 'New Asset',
+      html: '<h1>New Asset</h1>',
+      order: slides.length + 1,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    setSlides(prev => [...prev, newSlide]);
+    setEditingSlide(newSlide); // Load the new slide into the editor
+    
+    console.log('Created new asset slide:', newSlide);
+  };
+
+  const handlePreviousSlide = () => {
+    if (selectedAssetDeck && currentSlideIndex > 0) {
+      const newIndex = currentSlideIndex - 1;
+      setCurrentSlideIndex(newIndex);
+      const slideId = selectedAssetDeck.slideIds[newIndex];
+      const slide = slides.find(s => s.id === slideId);
+      if (slide) {
+        setEditingSlide(slide);
+      }
+    }
+  };
+
+  const handleNextSlide = () => {
+    if (selectedAssetDeck && currentSlideIndex < selectedAssetDeck.slideIds.length - 1) {
+      const newIndex = currentSlideIndex + 1;
+      setCurrentSlideIndex(newIndex);
+      const slideId = selectedAssetDeck.slideIds[newIndex];
+      const slide = slides.find(s => s.id === slideId);
+      if (slide) {
+        setEditingSlide(slide);
+      }
+    }
+  };
+
+  // Get current slide from selected asset deck
+  const getCurrentSlide = () => {
+    if (selectedAssetDeck && selectedAssetDeck.slideIds.length > 0) {
+      const currentSlideId = selectedAssetDeck.slideIds[currentSlideIndex];
+      const slide = slides.find(s => s.id === currentSlideId);
+      return slide || currentSlide;
+    }
+    return currentSlide;
+  };
+
   const handlePreachMode = () => {
     // Toggle between preach mode and edit mode
     setIsPreachMode(prev => !prev);
@@ -893,6 +1027,12 @@ function App() {
           >
             Asset Decks
           </button>
+          <button 
+            className={`tab ${activeModule === 'flows' ? 'active' : ''}`}
+            onClick={() => setActiveModule('flows')}
+          >
+            Flows
+          </button>
         </div>
       </div>
       
@@ -902,7 +1042,9 @@ function App() {
           {/* Module-aware Sidebar */}
           <Sidebar 
             activeModule={activeModule}
-            onSelectItem={(item) => console.log(`Selected ${activeModule}:`, item)}
+            onSelectItem={handleAssetDeckSelect}
+            onMakeNew={handleMakeNewAssetDeck}
+            customAssetDecksList={assetDecksList}
             onDeleteItem={handleDeleteItem}
             onSelectBackground={handleSelectBackground}
             onRemoveBackground={handleRemoveBackground}
@@ -912,8 +1054,53 @@ function App() {
           {/* Asset Decks: SlideEditor as primary workspace */}
           <main className="App-main asset-decks-workspace">
             <div className="asset-decks-editor">
+              {/* Asset Decks Toolbar */}
+              <div className="asset-decks-toolbar">
+                <div className="toolbar-left">
+                  <button 
+                    className="toolbar-button"
+                    onClick={handleAddToDeck}
+                    title="Add current slide to selected asset deck"
+                    disabled={!selectedAssetDeck}
+                  >
+                    ➕ Add to Deck
+                  </button>
+                  <button 
+                    className="toolbar-button"
+                    onClick={handleNewAsset}
+                    title="Create a new blank slide"
+                  >
+                    🆕 New Asset
+                  </button>
+                </div>
+                
+                <div className="toolbar-right">
+                  <button 
+                    className="toolbar-button"
+                    onClick={handlePreviousSlide}
+                    title="Previous slide"
+                    disabled={!selectedAssetDeck || currentSlideIndex === 0}
+                  >
+                    ⬆️ Previous
+                  </button>
+                  <span className="slide-counter">
+                    {selectedAssetDeck ? `${currentSlideIndex + 1} / ${selectedAssetDeck.slideIds.length}` : '0 / 0'}
+                  </span>
+                  <button 
+                    className="toolbar-button"
+                    onClick={handleNextSlide}
+                    title="Next slide"
+                    disabled={!selectedAssetDeck || currentSlideIndex >= (selectedAssetDeck?.slideIds.length || 0) - 1}
+                  >
+                    Next ⬇️
+                  </button>
+                </div>
+              </div>
+              
+              {/* Slide Editor */}
               <SlideEditorModal 
-                slide={currentSlide}
+                key={editingSlide?.id || getCurrentSlide().id} // Force re-render when slide changes
+                slide={editingSlide || getCurrentSlide()}
                 isOpen={true}
                 onClose={() => {}} // No-op since it's not a modal
                 onSave={handleSaveSlide}
@@ -924,10 +1111,10 @@ function App() {
           
           {/* SlideThumbnailList as popout overlay */}
           <SlideThumbnailList
-            slides={slides}
+            slides={slides.filter(slide => selectedAssetDeck?.slideIds.includes(slide.id) || !selectedAssetDeck)}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            title="Asset Deck Slides"
+            title={selectedAssetDeck?.title || "Asset Deck Slides"}
           />
         </>
       ) : activeModule === 'songs' ? (
@@ -960,6 +1147,36 @@ function App() {
             slides={slides.filter(slide => selectedSong?.slideIds.includes(slide.id) || !selectedSong)}
             onEdit={handleEdit}
             title={selectedSong?.title || "Songs"}
+          />
+        </>
+      ) : activeModule === 'flows' ? (
+        <>
+          {/* Module-aware Sidebar */}
+          <Sidebar 
+            activeModule={activeModule}
+            onSelectItem={(item) => console.log(`Selected ${activeModule}:`, item)}
+            onDeleteItem={handleDeleteItem}
+            onSelectBackground={handleSelectBackground}
+            onRemoveBackground={handleRemoveBackground}
+            itemsWithBackgrounds={itemsWithBackgrounds}
+          />
+
+          {/* Flows: Main workspace */}
+          <main className="App-main">
+            <div className="flows-workspace">
+              <div className="flows-editor">
+                <h2>Flows Module</h2>
+                <p>Flows workspace coming soon...</p>
+              </div>
+            </div>
+          </main>
+          
+          {/* SlideThumbnailList as popout overlay for Flows */}
+          <SlideThumbnailList
+            slides={slides}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            title="Flows"
           />
         </>
       ) : activeModule === 'sermons' ? (
@@ -1058,6 +1275,18 @@ function App() {
         title="Create New Sermon"
         placeholder="Enter sermon title..."
         itemType="sermon"
+      />
+
+      {/* Create Item Modal for Asset Decks */}
+      <CreateItemModal
+        isOpen={showAssetDeckTitleModal}
+        onClose={() => {
+          setShowAssetDeckTitleModal(false);
+        }}
+        onSubmit={handleCreateAssetDeck}
+        title="Create New Asset Deck"
+        placeholder="Enter asset deck title..."
+        itemType="asset-deck"
       />
 
       {/* MyMedia Library Modal */}

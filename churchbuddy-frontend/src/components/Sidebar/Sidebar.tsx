@@ -3,10 +3,11 @@ import styles from './Sidebar.module.css';
 import SearchBar from '../SearchBar/SearchBar';
 import { ISong } from '../../types/ISong';
 import { ISermon } from '../../types/ISermon';
+import { IAssetDeck } from '../../types/IAssetDeck';
 
 interface SidebarProps {
   /** Current active module */
-  activeModule: 'presentation' | 'songs' | 'sermons' | 'asset-decks';
+  activeModule: 'presentation' | 'songs' | 'sermons' | 'asset-decks' | 'flows';
   /** Optional callback when an item is selected */
   onSelectItem?: (item: string) => void;
   /** Optional callback when Make New is clicked */
@@ -21,6 +22,8 @@ interface SidebarProps {
   customSongsList?: ISong[];
   /** Optional custom sermons list to override default */
   customSermonsList?: ISermon[];
+  /** Optional custom asset decks list to override default */
+  customAssetDecksList?: IAssetDeck[];
   /** Optional list of items that have backgrounds set */
   itemsWithBackgrounds?: string[];
 }
@@ -34,6 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onRemoveBackground,
   customSongsList,
   customSermonsList,
+  customAssetDecksList,
   itemsWithBackgrounds = []
 }) => {
   const [collapsed, setCollapsed] = useState(false);
@@ -76,7 +80,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       case 'asset-decks':
         return {
           title: 'Asset Decks',
-          items: [
+          items: customAssetDecksList ? customAssetDecksList : [
             { id: 'asset-1', title: 'Christmas Collection' },
             { id: 'asset-2', title: 'Easter Slides' },
             { id: 'asset-3', title: 'Worship Backgrounds' },
@@ -88,6 +92,21 @@ const Sidebar: React.FC<SidebarProps> = ({
           ],
           placeholder: 'Search asset decks...',
         };
+      case 'flows':
+        return {
+          title: 'Flows',
+          items: [
+            { id: 'flow-1', title: 'Sunday Service' },
+            { id: 'flow-2', title: 'Wednesday Bible Study' },
+            { id: 'flow-3', title: 'Youth Group' },
+            { id: 'flow-4', title: 'Children\'s Ministry' },
+            { id: 'flow-5', title: 'Special Events' },
+            { id: 'flow-6', title: 'Prayer Meeting' },
+            { id: 'flow-7', title: 'Worship Night' },
+            { id: 'flow-8', title: 'Community Outreach' }
+          ],
+          placeholder: 'Search flows...',
+        };
       default:
         return {
           title: '',
@@ -95,7 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           placeholder: 'Search...'
         };
     }
-  }, [activeModule, customSongsList, customSermonsList]);
+  }, [activeModule, customSongsList, customSermonsList, customAssetDecksList]);
 
   const filtered = moduleData.items.filter((item) =>
     item.title.toLowerCase().includes(query.toLowerCase())

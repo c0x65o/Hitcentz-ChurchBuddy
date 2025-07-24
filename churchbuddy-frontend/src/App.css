@@ -87,8 +87,101 @@
 }
 
 .asset-decks-editor {
-  width: 75%;
+  width: 60%; /* Reduced from 75% to 60% */
   height: 100%;
+  margin: 0 auto; /* Center the editor */
+  max-width: 800px; /* Add max-width to prevent it from getting too wide */
+}
+
+.asset-decks-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px; /* Reduced padding */
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 12px 12px 0 0;
+}
+
+.asset-decks-toolbar .toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Reduced gap */
+}
+
+.asset-decks-toolbar .toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Reduced gap */
+}
+
+.asset-decks-toolbar .toolbar-button {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: white;
+  padding: 6px 12px; /* Reduced padding */
+  font-size: 13px; /* Slightly smaller font */
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px; /* Reduced min-width */
+  height: 32px; /* Reduced height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.asset-decks-toolbar .toolbar-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.asset-decks-toolbar .toolbar-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.asset-decks-toolbar .slide-counter {
+  color: white;
+  font-size: 13px; /* Slightly smaller font */
+  font-weight: 500;
+  padding: 6px 12px; /* Reduced padding */
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.flows-workspace {
+  width: 100%;
+  height: calc(100vh - 80px);
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.flows-editor {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  text-align: center;
+}
+
+.flows-editor h2 {
+  margin: 0 0 16px 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.flows-editor p {
+  margin: 0;
+  font-size: 16px;
+  opacity: 0.8;
 }
 
 .text-editor-workspace {
