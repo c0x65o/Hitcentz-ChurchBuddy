@@ -25,12 +25,17 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
     const bgMatch = slide.html.match(commentRegex);
     const bgUrl = bgMatch ? bgMatch[1] : null;
     
+    console.log('SlideRenderer - slide HTML:', slide.html);
+    console.log('SlideRenderer - background URL:', bgUrl);
+    
     if (bgUrl) {
+      console.log('SlideRenderer - applying background:', bgUrl);
       containerRef.current.style.backgroundImage = `url(${bgUrl})`;
-      containerRef.current.style.backgroundSize = 'contain';
+      containerRef.current.style.backgroundSize = 'cover';
       containerRef.current.style.backgroundPosition = 'center';
       containerRef.current.style.backgroundRepeat = 'no-repeat';
     } else {
+      console.log('SlideRenderer - no background found, clearing');
       containerRef.current.style.backgroundImage = '';
       containerRef.current.style.backgroundSize = '';
       containerRef.current.style.backgroundPosition = '';

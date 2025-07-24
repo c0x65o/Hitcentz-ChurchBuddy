@@ -7,6 +7,13 @@ interface TextEditorProps {
   placeholder?: string;
   title?: string;
   storageKey?: string; // New prop for localStorage key
+  onMakeSlide?: (selectedText: string) => Promise<any>; // New prop for sermon slide creation
+  showMakeSlideButton?: boolean; // New prop to show/hide Make Slide button
+  onClearSlides?: () => void; // New prop for clearing slides
+  showClearSlidesButton?: boolean; // New prop to show/hide Clear Slides button
+  onPreachMode?: () => void; // New prop for preach mode
+  showPreachButton?: boolean; // New prop to show/hide Preach button
+  isPreachMode?: boolean; // New prop to track preach mode state
 }
 
 const TextEditor: React.FC<TextEditorProps> = ({ 
@@ -14,7 +21,14 @@ const TextEditor: React.FC<TextEditorProps> = ({
   onSave, 
   placeholder = 'Start typing...',
   title = 'Document',
-  storageKey = 'text-editor-content' // Default key
+  storageKey = 'text-editor-content', // Default key
+  onMakeSlide,
+  showMakeSlideButton = false,
+  onClearSlides,
+  showClearSlidesButton = false,
+  onPreachMode,
+  showPreachButton = false,
+  isPreachMode = false,
 }) => {
   const [text, setText] = useState(content);
   const [isEditing, setIsEditing] = useState(false);
@@ -66,44 +80,241 @@ const TextEditor: React.FC<TextEditorProps> = ({
       e.preventDefault();
       document.execCommand('insertText', false, '  ');
     }
+    
+    // Handle Enter key to add new lines naturally
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.execCommand('insertLineBreak', false);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    // Let the default paste happen first
+    setTimeout(() => {
+      // Then trigger save immediately after paste
+      if (onSave && editorRef.current) {
+        const newText = editorRef.current.innerHTML || '';
+        console.log('Paste detected, triggering immediate save');
+        onSave(newText);
+      }
+    }, 100);
+  };
+
+  const handleMakeSlide = async () => {
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim()) {
+      const selectedText = selection.toString().trim();
+      console.log('Creating slide from selected text:', selectedText);
+      
+      if (onMakeSlide) {
+        try {
+          const slideInfo = await onMakeSlide(selectedText);
+          if (slideInfo && editorRef.current) {
+            // Replace the selected text with a slide button
+            const range = selection.getRangeAt(0);
+            const slideButton = createSlideButton(slideInfo);
+            
+            // Clear the selection and insert the button
+            range.deleteContents();
+            range.insertNode(slideButton);
+            
+            // Update the editor content
+            const newContent = editorRef.current.innerHTML;
+            setText(newContent);
+            localStorage.setItem(storageKey, newContent);
+            
+            // Trigger save
+            if (onSave) {
+              onSave(newContent);
+            }
+            
+            console.log('Slide button created and inserted');
+          }
+        } catch (error) {
+          console.error('Failed to create slide:', error);
+          alert('Failed to create slide. Please try again.');
+        }
+      }
+    } else {
+      alert('Please select some text first to create a slide.');
+    }
+  };
+
+  const createSlideButton = (slideInfo: any) => {
+    const button = document.createElement('span');
+    button.className = 'slide-button';
+    button.setAttribute('data-slide-id', slideInfo.slideId);
+    button.setAttribute('data-slide-title', slideInfo.slideTitle);
+    button.setAttribute('data-original-text', slideInfo.originalText);
+    button.setAttribute('contenteditable', 'false');
+    
+    // Get current editor font size to match slide button
+    const currentFontSize = editorRef.current?.style.fontSize || '16px';
+    
+    button.style.cssText = `
+      display: inline-block;
+      background: rgba(102, 126, 234, 0.1);
+      color: #667eea;
+      padding: 4px 8px;
+      margin: 1px 2px;
+      border-radius: 4px;
+      font-size: ${currentFontSize};
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid rgba(102, 126, 234, 0.3);
+      box-shadow: none;
+      user-select: none;
+      transition: all 0.2s ease;
+      line-height: 1.4;
+      max-width: 100%;
+      word-wrap: break-word;
+      font-family: inherit;
+    `;
+    // Use the original highlighted text as the button text
+    button.innerHTML = slideInfo.originalText;
+    
+    // Add hover effect
+    button.addEventListener('mouseenter', () => {
+      button.style.background = 'rgba(102, 126, 234, 0.15)';
+      button.style.borderColor = 'rgba(102, 126, 234, 0.5)';
+      button.style.boxShadow = '0 1px 3px rgba(102, 126, 234, 0.2)';
+    });
+    
+    button.addEventListener('mouseleave', () => {
+      button.style.background = 'rgba(102, 126, 234, 0.1)';
+      button.style.borderColor = 'rgba(102, 126, 234, 0.3)';
+      button.style.boxShadow = 'none';
+    });
+    
+    // Add click handler for future presentation mode
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log('Slide button clicked:', slideInfo.slideId);
+      // TODO: In presentation mode, this will set the active slide
+    });
+    
+    return button;
+  };
+
+  // Font toolbar functions
+  const handleFontSize = (size: string) => {
+    if (editorRef.current) {
+      // Apply font size to the entire editor content
+      const fontSize = size === '1' ? '12px' : 
+                     size === '3' ? '16px' : 
+                     size === '5' ? '20px' : 
+                     size === '7' ? '24px' : '16px';
+      
+      editorRef.current.style.fontSize = fontSize;
+      
+      // Update slide button font sizes to match
+      const slideButtons = editorRef.current.querySelectorAll('.slide-button');
+      slideButtons.forEach(button => {
+        (button as HTMLElement).style.fontSize = fontSize;
+      });
+      
+      // Also update any existing content
+      const currentContent = editorRef.current.innerHTML;
+      if (currentContent) {
+        // Re-apply the content to ensure the new font size takes effect
+        editorRef.current.innerHTML = currentContent;
+      }
+    }
+  };
+
+  const handleBold = () => {
+    document.execCommand('bold', false);
+  };
+
+  const handleItalic = () => {
+    document.execCommand('italic', false);
+  };
+
+  const handleHighlight = () => {
+    document.execCommand('backColor', false, 'yellow');
   };
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} ${isPreachMode ? styles.preachMode : ''}`}>
       {/* Toolbar */}
-      <div className={styles.toolbar}>
-        <div className={styles.toolGroup}>
-          <button className={styles.toolButton} title="Bold">
-            <strong>B</strong>
-          </button>
-          <button className={styles.toolButton} title="Italic">
-            <em>I</em>
-          </button>
-          <button className={styles.toolButton} title="Underline">
-            <u>U</u>
-          </button>
+      <div className={`${styles.toolbar} ${isPreachMode ? styles.preachMode : ''}`}>
+        <div className={styles.toolbarLeft}>
+          {showClearSlidesButton && !isPreachMode && (
+            <button 
+              className={styles.toolbarButton}
+              onClick={onClearSlides}
+              title="Clear all slides and slide buttons"
+            >
+              🗑️ Clear Slides
+            </button>
+          )}
+          {showMakeSlideButton && !isPreachMode && (
+            <button 
+              className={styles.toolbarButton}
+              onClick={handleMakeSlide}
+              title="Create slide from selected text"
+            >
+              📄 Make Slide
+            </button>
+          )}
         </div>
         
-        <div className={styles.toolGroup}>
-          <select className={styles.toolSelect} defaultValue="16">
-            <option value="12">12</option>
-            <option value="14">14</option>
-            <option value="16">16</option>
-            <option value="18">18</option>
-            <option value="20">20</option>
-            <option value="24">24</option>
-          </select>
-        </div>
-
-        <div className={styles.toolGroup}>
-          <button className={styles.toolButton} title="Align Left">⫷</button>
-          <button className={styles.toolButton} title="Align Center">⫸</button>
-          <button className={styles.toolButton} title="Align Right">⫹</button>
-        </div>
-
-        <div className={styles.toolGroup}>
-          <button className={styles.toolButton} title="Bullet List">•</button>
-          <button className={styles.toolButton} title="Numbered List">1.</button>
+        <div className={styles.toolbarRight}>
+          {isPreachMode && (
+            <div className={styles.preachModeMessage}>
+              📝 Press buttons to set slides as active
+            </div>
+          )}
+          
+          {showPreachButton && (
+            <button 
+              className={styles.toolbarButton}
+              onClick={onPreachMode}
+              title={isPreachMode ? "Return to edit mode" : "Switch to presentation mode"}
+            >
+              {isPreachMode ? "✏️ Edit" : "📖 Preach"}
+            </button>
+          )}
+          
+          {!isPreachMode && (
+            <>
+              <select 
+                className={styles.toolSelect}
+                onChange={(e) => handleFontSize(e.target.value)}
+                defaultValue="3"
+                title="Font Size"
+              >
+                <option value="1">Small</option>
+                <option value="3">Normal</option>
+                <option value="5">Large</option>
+                <option value="7">Extra Large</option>
+              </select>
+              
+              <button 
+                className={styles.toolButton}
+                onClick={handleBold}
+                title="Bold"
+              >
+                <strong>B</strong>
+              </button>
+              
+              <button 
+                className={styles.toolButton}
+                onClick={handleItalic}
+                title="Italic"
+              >
+                <em>I</em>
+              </button>
+              
+              <button 
+                className={styles.toolButton}
+                onClick={handleHighlight}
+                title="Highlight"
+              >
+                🟡
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -114,13 +325,15 @@ const TextEditor: React.FC<TextEditorProps> = ({
             <div
               ref={editorRef}
               className={`${styles.editor} ${isEditing ? styles.editing : ''}`}
-              contentEditable
+              contentEditable={!isPreachMode} // Make editable only when not in preach mode
               onInput={handleTextChange}
               onFocus={handleFocus}
               onBlur={handleBlur}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               suppressContentEditableWarning={true}
               data-placeholder={placeholder}
+              key={storageKey} // Force re-render when storageKey changes
             />
           </div>
         </div>
