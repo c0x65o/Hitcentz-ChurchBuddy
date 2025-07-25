@@ -8,7 +8,7 @@
 /* Module Navigation Tabs */
 .module-tabs {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; /* Distribute items to ends */
   align-items: center;
   padding: 16px 24px;
   background: rgba(255, 255, 255, 0.1);
@@ -17,6 +17,19 @@
   position: sticky;
   top: 0;
   z-index: 1000;
+}
+
+.tab-group-main {
+  display: flex;
+  gap: 8px;
+  margin-right: auto; /* Push this group to the left */
+  margin-left: 20%; /* Adjust as needed for right of center */
+}
+
+.tab-group-presentation {
+  display: flex;
+  gap: 8px;
+  margin-left: auto; /* Keep this group on the far right */
 }
 
 .brand-section {
@@ -36,12 +49,6 @@
   font-weight: 700;
   letter-spacing: -0.5px;
   color: white;
-}
-
-.tab-group {
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
 }
 
 .tab {
@@ -309,15 +316,17 @@
 .flows-drag-drop-workspace {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  gap: 16px;
+  gap: 8px;
+  flex: 1;
 }
 
 .flows-search-bar {
-  padding: 0 20px;
   display: flex;
   gap: 12px;
   align-items: center;
+  padding: 0 20px 12px 20px;
+  justify-content: flex-start;
+  margin-left: 14%;
 }
 
 .flows-search-input {
@@ -333,16 +342,16 @@
 
 .add-note-button {
   padding: 8px 16px;
-  background: rgba(255, 193, 7, 0.2);
-  border: 1px solid rgba(255, 193, 7, 0.3);
+  background: #fff9c4;
+  border: 1px solid #f57f17;
   border-radius: 6px;
-  color: #FFC107;
+  color: #8d6e63;
   font-size: 13px;
   font-weight: 500;
-  cursor: grab;
+  cursor: pointer;
   transition: all 0.2s ease;
-  user-select: none;
-  white-space: nowrap;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  font-family: 'Comic Sans MS', cursive, sans-serif;
 }
 
 .add-note-button:hover {
@@ -368,6 +377,91 @@
   padding: 0 20px 20px 20px;
 }
 
+/* Flows Editor - Centering the main content area */
+.flows-editor {
+  max-width: 1400px; /* Adjust as needed */
+  margin: 0 auto;
+  width: 100%; /* Ensure it takes full width up to max-width */
+}
+
+/* Main Content Area - Side by Side */
+.flows-main-content {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  padding: 0 20px 20px 20px;
+  overflow-y: auto;
+  justify-content: center;
+}
+
+/* Collections Container - Vertical Stack */
+.collections-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 0 0 45%;
+  height: 100%;
+}
+
+/* Individual Collection Sections - Each is completely separate */
+.collection-section {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 150px;
+  max-height: 200px;
+  flex: 1;
+}
+
+.section-title {
+  margin: 0;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  text-align: center;
+}
+
+.collection-items {
+  padding: 12px;
+  overflow-y: auto;
+  max-height: calc(100% - 45px); /* Account for section title */
+}
+
+/* Print Flow Button */
+.flow-print-section {
+  padding: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: right;
+}
+
+.print-flow-button {
+  padding: 8px 16px;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 6px;
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.print-flow-button:hover:not(:disabled) {
+  background: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.print-flow-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .flow-column {
   flex: 1;
   display: flex;
@@ -381,6 +475,7 @@
 .flow-column.current-flow {
   background: rgba(102, 126, 234, 0.1);
   border-color: rgba(102, 126, 234, 0.3);
+  flex: 0 0 25%;
 }
 
 .column-title {
@@ -527,22 +622,26 @@
 }
 
 .note-flow-item {
-  background: rgba(255, 193, 7, 0.2);
-  border-color: rgba(255, 193, 7, 0.3);
+  background: #fff9c4;
+  border-color: #f57f17;
+  color: #8d6e63;
+  font-family: 'Comic Sans MS', cursive, sans-serif;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .note-input {
   width: 100%;
   background: transparent;
   border: none;
-  color: white;
+  color: #8d6e63;
   font-size: 13px;
+  font-family: 'Comic Sans MS', cursive, sans-serif;
   outline: none;
   padding: 0;
 }
 
 .note-input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: #a1887f;
 }
 
 .draggable-item.note-item {
@@ -592,4 +691,69 @@
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   overflow: hidden;
+}
+
+.note-flow-item:hover {
+  background: #fff3e0;
+  border-color: #e65100;
+  color: #5d4037;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Asset Decks Welcome Message */
+.asset-decks-welcome {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+}
+
+.welcome-content {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  max-width: 400px;
+  padding: 40px;
+}
+
+.welcome-content h2 {
+  margin: 0 0 16px 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: white;
+}
+
+.welcome-content p {
+  margin: 0 0 24px 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.welcome-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.welcome-button {
+  padding: 12px 24px;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.welcome-button:hover {
+  background: rgba(102, 126, 234, 0.4);
+  border-color: rgba(102, 126, 234, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }

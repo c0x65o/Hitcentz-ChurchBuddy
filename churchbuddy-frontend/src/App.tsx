@@ -34,7 +34,7 @@ function App() {
   ]);
   
   const [assetDecksList, setAssetDecksList] = useState<IAssetDeck[]>([
-    { id: 'deck-1', title: 'Welcome Slides', slideIds: [], createdAt: new Date(), updatedAt: new Date() },
+    { id: 'deck-1', title: "click 'New Asset' to start", slideIds: [], createdAt: new Date(), updatedAt: new Date() },
     { id: 'deck-2', title: 'Announcements', slideIds: [], createdAt: new Date(), updatedAt: new Date() },
     { id: 'deck-3', title: 'Prayer Requests', slideIds: [], createdAt: new Date(), updatedAt: new Date() }
   ]);
@@ -701,7 +701,32 @@ function App() {
           setEditingSlide(firstSlide);
         }
       } else {
-        setEditingSlide(null); // Clear editing slide if deck is empty
+        // If deck is empty, automatically create a new asset (like clicking "New Asset")
+        const newSlide: ISlide = {
+          id: `slide-${Date.now()}`,
+          title: 'New Asset',
+          html: '<h1>New Asset</h1>',
+          order: slides.length + 1,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        setSlides(prev => [...prev, newSlide]);
+        setEditingSlide(newSlide); // Load the new slide into the editor
+        
+        // Add the new slide to the selected asset deck
+        const updatedAssetDeck = {
+          ...assetDeck,
+          slideIds: [newSlide.id],
+          updatedAt: new Date()
+        };
+        
+        setAssetDecksList(prev => prev.map(deck => 
+          deck.id === assetDeck.id ? updatedAssetDeck : deck
+        ));
+        setSelectedAssetDeck(updatedAssetDeck);
+        
+        console.log('Auto-created new asset for empty deck:', newSlide);
       }
       
       console.log('Selected asset deck:', assetDeck);
@@ -1317,38 +1342,38 @@ function App() {
           <div className="brand-logo">⛪</div>
           <span className="brand-name">ChurchBuddy</span>
         </div>
-        <div className="tab-group">
-          <button 
-            className={`tab ${activeModule === 'presentation' ? 'active' : ''}`}
-            onClick={() => setActiveModule('presentation')}
-          >
-            Presentation
-          </button>
-        </div>
-        <div className="tab-group">
+        <div className="tab-group-main">
           <button 
             className={`tab ${activeModule === 'songs' ? 'active' : ''}`}
             onClick={() => setActiveModule('songs')}
           >
             Songs
           </button>
-          <button 
+          <button
             className={`tab ${activeModule === 'sermons' ? 'active' : ''}`}
             onClick={() => setActiveModule('sermons')}
           >
             Sermons
           </button>
-          <button 
+          <button
             className={`tab ${activeModule === 'asset-decks' ? 'active' : ''}`}
             onClick={() => setActiveModule('asset-decks')}
           >
             Asset Decks
           </button>
-          <button 
+          <button
             className={`tab ${activeModule === 'flows' ? 'active' : ''}`}
             onClick={() => setActiveModule('flows')}
           >
             Flows
+          </button>
+        </div>
+        <div className="tab-group-presentation">
+          <button 
+            className={`tab ${activeModule === 'presentation' ? 'active' : ''}`}
+            onClick={() => setActiveModule('presentation')}
+          >
+            Presentation
           </button>
         </div>
       </div>
@@ -1414,15 +1439,32 @@ function App() {
                 </div>
               </div>
               
-              {/* Slide Editor */}
-              <SlideEditorModal 
-                key={editingSlide?.id || getCurrentSlide().id} // Force re-render when slide changes
-                slide={editingSlide || getCurrentSlide()}
-                isOpen={true}
-                onClose={() => {}} // No-op since it's not a modal
-                onSave={handleSaveSlide}
-                isEmbedded={true}
-              />
+              {/* Slide Editor or Welcome Message */}
+              {editingSlide ? (
+                <SlideEditorModal 
+                  key={editingSlide.id} // Force re-render when slide changes
+                  slide={editingSlide}
+                  isOpen={true}
+                  onClose={() => {}} // No-op since it's not a modal
+                  onSave={handleSaveSlide}
+                  isEmbedded={true}
+                />
+              ) : (
+                <div className="asset-decks-welcome">
+                  <div className="welcome-content">
+                    <h2>Welcome to Asset Decks</h2>
+                    <p>Select an asset deck from the sidebar to start creating slides, or click "New Asset" to create a new slide.</p>
+                    <div className="welcome-actions">
+                      <button 
+                        className="welcome-button"
+                        onClick={handleNewAsset}
+                      >
+                        🆕 Create New Asset
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </main>
           
@@ -1484,26 +1526,6 @@ function App() {
           <main className="App-main">
             <div className="flows-workspace">
               <div className="flows-editor">
-                {/* Flows Toolbar */}
-                <div className="flows-toolbar">
-                  <div className="toolbar-left">
-                    <button 
-                      className="toolbar-button"
-                      onClick={handlePrintFlow}
-                      title="Print flow"
-                      disabled={!selectedFlow}
-                    >
-                      🖨️ Print Flow
-                    </button>
-                  </div>
-                  
-                  <div className="toolbar-right">
-                    <span className="flow-info">
-                      {selectedFlow ? `${selectedFlow.listOfLists.length} collections, ${selectedFlow.listOfNotes.length} notes` : 'No flow selected'}
-                    </span>
-                  </div>
-                </div>
-                
                 {/* Flow Content */}
                 <div className="flow-content">
                   {selectedFlow ? (
@@ -1529,93 +1551,96 @@ function App() {
                           }}
                           title="Drag to add note to flow"
                         >
-                          📝 Drag and Drop Note
+                          📝 Sticky Note
                         </button>
                       </div>
                       
-                      {/* Drag and Drop Columns */}
-                      <div className="flows-columns">
-                        {/* Songs Column */}
-                        <div className="flow-column">
-                          <h4 className="column-title">Songs</h4>
-                          <div className="column-items">
-                            {songsList
-                              .filter(song => 
-                                flowsSearchTerm === '' || 
-                                song.title.toLowerCase().includes(flowsSearchTerm.toLowerCase())
-                              )
-                              .map((song) => (
-                              <div
-                                key={song.id}
-                                className="draggable-item"
-                                draggable
-                                onDragStart={(e) => {
-                                  e.dataTransfer.setData('text/plain', JSON.stringify({
-                                    type: 'song',
-                                    id: song.id,
-                                    title: song.title
-                                  }));
-                                }}
-                              >
-                                🎵 {song.title}
-                              </div>
-                            ))}
+                      {/* Main Content Area - Side by Side */}
+                      <div className="flows-main-content">
+                        {/* Collections Container - Vertical Stack */}
+                        <div className="collections-container">
+                          {/* Songs Section */}
+                          <div className="collection-section">
+                            <h4 className="section-title">Songs</h4>
+                            <div className="collection-items">
+                              {songsList
+                                .filter(song => 
+                                  flowsSearchTerm === '' || 
+                                  song.title.toLowerCase().includes(flowsSearchTerm.toLowerCase())
+                                )
+                                .map((song) => (
+                                <div
+                                  key={song.id}
+                                  className="draggable-item"
+                                  draggable
+                                  onDragStart={(e) => {
+                                    e.dataTransfer.setData('text/plain', JSON.stringify({
+                                      type: 'song',
+                                      id: song.id,
+                                      title: song.title
+                                    }));
+                                  }}
+                                >
+                                  🎵 {song.title}
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                        
-                        {/* Sermons Column */}
-                        <div className="flow-column">
-                          <h4 className="column-title">Sermons</h4>
-                          <div className="column-items">
-                            {sermonsList
-                              .filter(sermon => 
-                                flowsSearchTerm === '' || 
-                                sermon.title.toLowerCase().includes(flowsSearchTerm.toLowerCase())
-                              )
-                              .map((sermon) => (
-                              <div
-                                key={sermon.id}
-                                className="draggable-item"
-                                draggable
-                                onDragStart={(e) => {
-                                  e.dataTransfer.setData('text/plain', JSON.stringify({
-                                    type: 'sermon',
-                                    id: sermon.id,
-                                    title: sermon.title
-                                  }));
-                                }}
-                              >
-                                📖 {sermon.title}
-                              </div>
-                            ))}
+                          
+                          {/* Sermons Section */}
+                          <div className="collection-section">
+                            <h4 className="section-title">Sermons</h4>
+                            <div className="collection-items">
+                              {sermonsList
+                                .filter(sermon => 
+                                  flowsSearchTerm === '' || 
+                                  sermon.title.toLowerCase().includes(flowsSearchTerm.toLowerCase())
+                                )
+                                .map((sermon) => (
+                                <div
+                                  key={sermon.id}
+                                  className="draggable-item"
+                                  draggable
+                                  onDragStart={(e) => {
+                                    e.dataTransfer.setData('text/plain', JSON.stringify({
+                                      type: 'sermon',
+                                      id: sermon.id,
+                                      title: sermon.title
+                                    }));
+                                  }}
+                                >
+                                  📖 {sermon.title}
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                        
-                        {/* Asset Decks Column */}
-                        <div className="flow-column">
-                          <h4 className="column-title">Asset Decks</h4>
-                          <div className="column-items">
-                            {assetDecksList
-                              .filter(assetDeck => 
-                                flowsSearchTerm === '' || 
-                                assetDeck.title.toLowerCase().includes(flowsSearchTerm.toLowerCase())
-                              )
-                              .map((assetDeck) => (
-                              <div
-                                key={assetDeck.id}
-                                className="draggable-item"
-                                draggable
-                                onDragStart={(e) => {
-                                  e.dataTransfer.setData('text/plain', JSON.stringify({
-                                    type: 'asset-deck',
-                                    id: assetDeck.id,
-                                    title: assetDeck.title
-                                  }));
-                                }}
-                              >
-                                📚 {assetDeck.title}
-                              </div>
-                            ))}
+                          
+                          {/* Asset Decks Section */}
+                          <div className="collection-section">
+                            <h4 className="section-title">Asset Decks</h4>
+                            <div className="collection-items">
+                              {assetDecksList
+                                .filter(assetDeck => 
+                                  flowsSearchTerm === '' || 
+                                  assetDeck.title.toLowerCase().includes(flowsSearchTerm.toLowerCase())
+                                )
+                                .map((assetDeck) => (
+                                <div
+                                  key={assetDeck.id}
+                                  className="draggable-item"
+                                  draggable
+                                  onDragStart={(e) => {
+                                    e.dataTransfer.setData('text/plain', JSON.stringify({
+                                      type: 'asset-deck',
+                                      id: assetDeck.id,
+                                      title: assetDeck.title
+                                    }));
+                                  }}
+                                >
+                                  📚 {assetDeck.title}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                         
@@ -1877,6 +1902,18 @@ function App() {
                                 <p>Drag items here to build your flow</p>
                               </div>
                             )}
+                          </div>
+                          
+                          {/* Print Flow Button */}
+                          <div className="flow-print-section">
+                            <button 
+                              className="print-flow-button"
+                              onClick={handlePrintFlow}
+                              title="Print flow"
+                              disabled={!selectedFlow}
+                            >
+                              🖨️ Print Flow
+                            </button>
                           </div>
                         </div>
                       </div>
