@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import SlideRenderer from './components/SlideRenderer/SlideRenderer';
 import SlideThumbnailList from './components/SlideThumbnailList/SlideThumbnailList';
@@ -15,6 +15,9 @@ import { ISermon } from './types/ISermon';
 import { IAssetDeck } from './types/IAssetDeck';
 import { IFlow } from './types/IFlow';
 import apiService from './services/api';
+import BulletinOverlay from './components/BulletinOverlay/BulletinOverlay';
+import { v4 as uuidv4 } from 'uuid';
+import { IBulletinMessage } from './types/IBulletinMessage';
 
 function App() {
   console.log('🚀 App component rendering...');
@@ -1726,6 +1729,57 @@ function App() {
     };
   }, [autoCycleTimers]);
 
+  // Bulletin overlay state
+  const [bulletinOverlayOpen, setBulletinOverlayOpen] = useState(false);
+  const toggleBulletinOverlay = () => {
+    setBulletinOverlayOpen(prev => !prev);
+  };
+
+  // Bulletin messages state
+  const [bulletinMessages, setBulletinMessages] = useState<IBulletinMessage[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const MESSAGES_PER_PAGE = 10;
+
+  // Function to add a new bulletin message
+  const handleAddBulletin = (name: string, messageText: string, messageTitle?: string) => {
+    const newBulletin: IBulletinMessage = {
+      id: uuidv4(),
+      name,
+      messageText,
+      messageTitle: messageTitle || '', // Ensure it's a string even if optional
+      timestamp: new Date(),
+    };
+    setBulletinMessages(prev => [newBulletin, ...prev]); // Add new message to the top
+    // In a real app, this would send to backend
+  };
+
+  // Simulate fetching initial/more bulletins
+  useEffect(() => {
+    // Load from localStorage or simulate initial data
+    const storedBulletins = localStorage.getItem('churchbuddyBulletins');
+    if (storedBulletins) {
+      setBulletinMessages(JSON.parse(storedBulletins).map((b: any) => ({
+        ...b,
+        timestamp: new Date(b.timestamp) // Convert timestamp string back to Date object
+      })));
+    } else {
+      // Simulate some initial bulletins
+      const initialBulletins: IBulletinMessage[] = Array.from({ length: 15 }).map((_, i) => ({
+        id: uuidv4(),
+        name: `Admin${15 - i}`,
+        messageTitle: i % 3 === 0 ? `Important Announcement ${15 - i}` : undefined,
+        messageText: `This is a simulated bulletin message number ${15 - i}. It contains important information for the congregation.`,
+        timestamp: new Date(Date.now() - (15 - i) * 3600 * 1000),
+      }));
+      setBulletinMessages(initialBulletins);
+    }
+  }, []);
+
+  // Save bulletins to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('churchbuddyBulletins', JSON.stringify(bulletinMessages));
+  }, [bulletinMessages]);
+
   return (
     <div className="App">
       {/* Module Navigation Tabs */}
@@ -2798,6 +2852,16 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Bulletin Overlay */}
+      <BulletinOverlay
+        isOpen={bulletinOverlayOpen}
+        onToggle={toggleBulletinOverlay}
+        messages={bulletinMessages.slice(0, currentPage * MESSAGES_PER_PAGE)}
+        onAddMessage={handleAddBulletin}
+        onLoadMore={() => setCurrentPage(prev => prev + 1)}
+        hasMoreMessages={bulletinMessages.length > currentPage * MESSAGES_PER_PAGE}
+      />
     </div>
   );
 }

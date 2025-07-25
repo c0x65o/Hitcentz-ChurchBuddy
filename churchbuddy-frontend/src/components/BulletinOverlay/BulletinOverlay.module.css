@@ -1,0 +1,241 @@
+.bulletinOverlayContainer {
+  position: fixed;
+  bottom: 20px;
+  right: 0px;
+  z-index: 1000; /* Ensure it's on top */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.reopenButton {
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  font-size: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  margin-right: 20px;
+}
+
+.reopenButton:hover {
+  background: #5a67d8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.bulletinPopout {
+  background: #333333;
+  border-radius: 8px 0 0 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  width: 350px; /* Same width as SlideThumbnailList */
+  height: calc(100vh * 0.75 * 0.85); /* 3/4 of screen height minus 15% */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #f0f0f0;
+  border: 1px solid #444444;
+  border-right: none;
+  position: relative;
+}
+
+.closeButton {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  color: #ffffff;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  z-index: 10;
+}
+
+.closeButton:hover {
+  background: rgba(255, 0, 0, 0.8);
+  color: #ffffff;
+  transform: scale(1.1);
+}
+
+.messagesContainer {
+  flex: 1;
+  padding: 15px;
+  padding-top: 50px; /* Space for the close button */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.messagesContainer p {
+  text-align: center;
+  color: #999999;
+  margin-top: 20px;
+}
+
+.noMessages {
+  text-align: center;
+  color: #cccccc;
+  font-size: 14px;
+  margin-top: 20px;
+  font-style: italic;
+}
+
+.messagesList {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.bulletinMessage {
+  background: #2a2a2a;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #3a3a3a;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.messageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.messageName {
+  font-weight: 600;
+  color: #667eea;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.messageTitle {
+  font-style: italic;
+  color: #b8c5d1;
+  font-size: 14px;
+  flex-grow: 1;
+  text-align: right;
+  margin-left: 10px;
+}
+
+.messageTimestamp {
+  font-size: 12px;
+  color: #888888;
+  flex-shrink: 0;
+}
+
+.messageText {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #ffffff;
+  font-weight: 400;
+}
+
+.loadMoreButton {
+  background: #4a4a4a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 15px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+  align-self: center; /* Center the button */
+  width: fit-content;
+}
+
+.loadMoreButton:hover {
+  background: #5a67d8;
+  transform: translateY(-1px);
+}
+
+.createBulletinForm {
+  padding: 15px;
+  border-top: 1px solid #444444;
+  background: #2a2a2a;
+}
+
+.createBulletinForm h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 16px;
+  color: #f0f0f0;
+  font-weight: 600;
+}
+
+.nameAndSendRow {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.nameInput {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #555555;
+  border-radius: 4px;
+  background: #1e1e1e;
+  color: #f0f0f0;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.messageInput {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 0;
+  border: 1px solid #555555;
+  border-radius: 4px;
+  background: #1e1e1e;
+  color: #f0f0f0;
+  font-size: 14px;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 80px;
+  max-height: 150px;
+}
+
+.nameInput::placeholder,
+.messageInput::placeholder {
+  color: #888888;
+}
+
+.sendButton {
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 15px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sendButton:hover {
+  background: #5a67d8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+} 

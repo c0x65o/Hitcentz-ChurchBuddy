@@ -1,7 +1,7 @@
 export interface IBulletinMessage {
   id: string;
-  title: string;
-  content: string;
-  createdAt: Date;
-  updatedAt: Date;
+  name: string;
+  messageTitle?: string;
+  messageText: string;
+  timestamp: Date;
 } 
