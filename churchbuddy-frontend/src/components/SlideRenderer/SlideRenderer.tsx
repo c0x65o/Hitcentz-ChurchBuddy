@@ -8,9 +8,10 @@ interface SlideRendererProps {
   editMode?: boolean;
   onTextEdit?: (element: HTMLElement, newText: string) => void;
   uniqueId?: string;
+  disableScaling?: boolean;
 }
 
-const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMode = false, onTextEdit, uniqueId }) => {
+const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMode = false, onTextEdit, uniqueId, disableScaling = false }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -712,6 +713,18 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
       const container = containerRef.current;
       const containerRect = container.getBoundingClientRect();
       
+      if (disableScaling) {
+        // For grid items, scale to fit the container size
+        const stageWidth = 1920;
+        const stageHeight = 1080;
+        const scaleX = containerRect.width / stageWidth;
+        const scaleY = containerRect.height / stageHeight;
+        // Use the smaller scale to ensure it fits in both dimensions
+        const newScale = Math.min(scaleX, scaleY);
+        setScale(newScale);
+        return;
+      }
+      
       // Fixed stage size (1920x1080)
       const stageWidth = 1920;
       const stageHeight = 1080;
@@ -741,7 +754,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [disableScaling]);
 
   // Calculate font size for fixed 1920x1080 stage
   useEffect(() => {

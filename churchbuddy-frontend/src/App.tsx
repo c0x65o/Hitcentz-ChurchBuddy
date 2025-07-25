@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import SlideRenderer from './components/SlideRenderer/SlideRenderer';
 import SlideThumbnailList from './components/SlideThumbnailList/SlideThumbnailList';
+import SlideThumbnail from './components/SlideThumbnail/SlideThumbnail';
+import SlideGrid from './components/SlideGrid/SlideGrid';
 import Sidebar from './components/Sidebar/Sidebar';
 import SlideEditorModal from './components/SlideEditorModal/SlideEditorModal';
 import TextEditor from './components/TextEditor/TextEditor';
@@ -15,6 +17,8 @@ import { IFlow } from './types/IFlow';
 import apiService from './services/api';
 
 function App() {
+  console.log('🚀 App component rendering...');
+  
   const [activeModule, setActiveModule] = useState<'presentation' | 'songs' | 'sermons' | 'asset-decks' | 'flows'>('songs');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSlide, setEditingSlide] = useState<ISlide | null>(null);
@@ -1099,7 +1103,7 @@ function App() {
       } else if (item.type === 'note') {
         newListOfNotes.push(item.note || '');
         newListOfNotePosition.push(index);
-      }
+    }
     });
     
     const updatedFlow = {
@@ -1261,6 +1265,62 @@ function App() {
 
   const handleMediaSelect = (media: any) => {
     console.log('Media selected:', media);
+    
+    // Handle collection backgrounds (for Presentation tab)
+    if (backgroundTargetCollection) {
+      const song = songsList.find(s => s.id === backgroundTargetCollection);
+      const sermon = sermonsList.find(s => s.id === backgroundTargetCollection);
+      const assetDeck = assetDecksList.find(a => a.id === backgroundTargetCollection);
+      
+      if (song) {
+        const updatedSlides = slides.map(slide => {
+          if (song.slideIds.includes(slide.id)) {
+            const cleanHtml = slide.html.replace(/<!--BACKGROUND:.*?-->/g, '');
+            const newHtml = `<!--BACKGROUND:${media.url}-->${cleanHtml}`;
+            return {
+              ...slide,
+              html: newHtml
+            };
+          }
+          return slide;
+        });
+        setSlides(updatedSlides);
+        setCollectionsWithBackgrounds(prev => [...prev, backgroundTargetCollection]);
+      } else if (sermon) {
+        const updatedSlides = slides.map(slide => {
+          if (sermon.slideIds.includes(slide.id)) {
+            const cleanHtml = slide.html.replace(/<!--BACKGROUND:.*?-->/g, '');
+            const newHtml = `<!--BACKGROUND:${media.url}-->${cleanHtml}`;
+            return {
+              ...slide,
+              html: newHtml
+            };
+          }
+          return slide;
+        });
+        setSlides(updatedSlides);
+        setCollectionsWithBackgrounds(prev => [...prev, backgroundTargetCollection]);
+      } else if (assetDeck) {
+        const updatedSlides = slides.map(slide => {
+          if (assetDeck.slideIds.includes(slide.id)) {
+            const cleanHtml = slide.html.replace(/<!--BACKGROUND:.*?-->/g, '');
+            const newHtml = `<!--BACKGROUND:${media.url}-->${cleanHtml}`;
+            return {
+              ...slide,
+              html: newHtml
+            };
+          }
+          return slide;
+        });
+        setSlides(updatedSlides);
+        setCollectionsWithBackgrounds(prev => [...prev, backgroundTargetCollection]);
+      }
+      setMyMediaModalOpen(false);
+      setBackgroundTargetCollection(null);
+      return;
+    }
+    
+    // Handle existing sidebar functionality
     if (backgroundTargetItem && activeModule === 'songs') {
       const song = songsList.find(s => s.title === backgroundTargetItem);
       console.log('Found song:', song);
@@ -1334,6 +1394,338 @@ function App() {
     }
   };
 
+  // Presentation tab state
+  const [selectedPresentationFlow, setSelectedPresentationFlow] = useState<IFlow | null>(null);
+  const [activeSlide, setActiveSlide] = useState<ISlide | null>(null);
+  const [selectedCollection, setSelectedCollection] = useState<{
+    type: 'collection' | 'note';
+    id: string;
+    title: string;
+    slides?: ISlide[];
+    noteText?: string;
+  } | null>(null);
+  
+  // Second display connection state
+  const [isConnectedToSecondDisplay, setIsConnectedToSecondDisplay] = useState(false);
+  const [secondDisplayWindow, setSecondDisplayWindow] = useState<Window | null>(null);
+
+  // Active slide management
+  const handleSlideActivation = (slide: ISlide) => {
+    console.warn('🎯 HANDLE SLIDE ACTIVATION CALLED!');
+    console.warn('Selected slide:', slide);
+    
+    // Remove active variable from all slides
+    const updatedSlides = slides.map(s => ({
+      ...s,
+      html: s.html.replace(/ data-active="true"/g, '').replace(/ class="[^"]*active[^"]*"/g, (match) => {
+        return match.replace(/active/g, '').replace(/\s+/g, ' ').trim();
+      })
+    }));
+    
+    // Add active variable to the selected slide
+    const slideToActivate = updatedSlides.find(s => s.id === slide.id);
+    if (slideToActivate) {
+      // Preserve any background comments and only add active attributes to the main container
+      const backgroundMatch = slideToActivate.html.match(/<!--BACKGROUND:.*?-->/);
+      const backgroundComment = backgroundMatch ? backgroundMatch[0] : '';
+      const htmlWithoutBackground = slideToActivate.html.replace(/<!--BACKGROUND:.*?-->/g, '');
+      
+      // Add active attributes to the first div or main container
+      const updatedHtml = htmlWithoutBackground.replace(/<div([^>]*)>/i, (match, attributes) => {
+        if (attributes.includes('class=')) {
+          return `<div${attributes} data-active="true">`;
+        } else {
+          return `<div${attributes} class="active" data-active="true">`;
+        }
+      });
+      
+      // Restore background comment if it existed
+      slideToActivate.html = backgroundComment + updatedHtml;
+    }
+    
+    // Update slides state
+    setSlides(updatedSlides);
+    setActiveSlide(slide);
+    
+    // Debug output
+    console.warn('🚨 ACTIVE SLIDE SET TO:', slide.id);
+    console.warn('🚨 ACTIVE SLIDE TITLE:', slide.title);
+    console.warn('🚨 ACTIVE SLIDE HTML:', slideToActivate?.html);
+  };
+
+  // Function to find the currently active slide
+  const getActiveSlide = () => {
+    return slides.find(slide => 
+      slide.html.includes('data-active="true"') || slide.html.includes('class="active"')
+    ) || null;
+  };
+
+  // Keyboard navigation for Presentation tab
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (activeModule !== 'presentation' || !selectedPresentationFlow) return;
+    
+    const activeSlide = getActiveSlide();
+    if (!activeSlide) return;
+    
+    // Get all slides from the current flow
+    const allFlowSlides: ISlide[] = [];
+    selectedPresentationFlow.listOfLists.forEach((collectionId, index) => {
+      const song = songsList.find(s => s.id === collectionId);
+      const sermon = sermonsList.find(s => s.id === collectionId);
+      const assetDeck = assetDecksList.find(a => a.id === collectionId);
+      
+      if (song) {
+        const songSlides = slides.filter(slide => song.slideIds.includes(slide.id));
+        allFlowSlides.push(...songSlides);
+      } else if (sermon) {
+        const sermonSlides = slides.filter(slide => sermon.slideIds.includes(slide.id));
+        allFlowSlides.push(...sermonSlides);
+      } else if (assetDeck) {
+        const assetSlides = slides.filter(slide => assetDeck.slideIds.includes(slide.id));
+        allFlowSlides.push(...assetSlides);
+      }
+    });
+    
+    const currentIndex = allFlowSlides.findIndex(slide => slide.id === activeSlide.id);
+    
+    switch (event.key) {
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        event.preventDefault();
+        if (currentIndex > 0) {
+          handleSlideActivation(allFlowSlides[currentIndex - 1]);
+        }
+        break;
+      case 'ArrowRight':
+      case 'ArrowDown':
+      case ' ':
+        event.preventDefault();
+        if (currentIndex < allFlowSlides.length - 1) {
+          handleSlideActivation(allFlowSlides[currentIndex + 1]);
+        }
+        break;
+    }
+  };
+
+  // Add keyboard event listener
+  useEffect(() => {
+    if (activeModule === 'presentation') {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [activeModule, selectedPresentationFlow, slides, songsList, sermonsList, assetDecksList]);
+
+  // Auto-cycle state for collections
+  const [autoCycleStates, setAutoCycleStates] = useState<{ [key: string]: boolean }>({});
+  const [autoCycleTimers, setAutoCycleTimers] = useState<{ [key: string]: NodeJS.Timeout | null }>({});
+  const [autoCycleTiming, setAutoCycleTiming] = useState<{ [key: string]: number }>({});
+  const [collectionsWithBackgrounds, setCollectionsWithBackgrounds] = useState<string[]>([]);
+  const [backgroundTargetCollection, setBackgroundTargetCollection] = useState<string | null>(null);
+
+  // Auto-cycle function for a collection
+  const handleAutoCycle = (collectionId: string, slides: ISlide[]) => {
+    const isCurrentlyCycling = autoCycleStates[collectionId];
+    
+    if (isCurrentlyCycling) {
+      // Stop cycling
+      const timer = autoCycleTimers[collectionId];
+      if (timer) {
+        clearInterval(timer);
+      }
+      setAutoCycleStates(prev => ({ ...prev, [collectionId]: false }));
+      setAutoCycleTimers(prev => ({ ...prev, [collectionId]: null }));
+    } else {
+      // Start cycling
+      let currentIndex = 0;
+      const timing = autoCycleTiming[collectionId] || 1000; // Default to 1 second
+      const timer = setInterval(() => {
+        if (slides.length > 0) {
+          handleSlideActivation(slides[currentIndex]);
+          currentIndex = (currentIndex + 1) % slides.length; // Loop back to beginning
+        }
+      }, timing);
+      
+      setAutoCycleStates(prev => ({ ...prev, [collectionId]: true }));
+      setAutoCycleTimers(prev => ({ ...prev, [collectionId]: timer }));
+    }
+  };
+
+  // Handle timing change
+  const handleTimingChange = (collectionId: string, timing: number) => {
+    setAutoCycleTiming(prev => ({ ...prev, [collectionId]: timing }));
+    
+    // If currently cycling, restart with new timing
+    if (autoCycleStates[collectionId]) {
+      const timer = autoCycleTimers[collectionId];
+      if (timer) {
+        clearInterval(timer);
+      }
+      
+      const collectionSlides: ISlide[] = (() => {
+        const song = songsList.find(s => s.id === collectionId);
+        const sermon = sermonsList.find(s => s.id === collectionId);
+        const assetDeck = assetDecksList.find(a => a.id === collectionId);
+        
+        if (song) {
+          return slides.filter(slide => song.slideIds.includes(slide.id));
+        } else if (sermon) {
+          return slides.filter(slide => sermon.slideIds.includes(slide.id));
+        } else if (assetDeck) {
+          return slides.filter(slide => assetDeck.slideIds.includes(slide.id));
+        }
+        return [];
+      })();
+      
+      let currentIndex = 0;
+      const newTimer = setInterval(() => {
+        if (collectionSlides.length > 0) {
+          handleSlideActivation(collectionSlides[currentIndex]);
+          currentIndex = (currentIndex + 1) % collectionSlides.length;
+        }
+      }, timing);
+      
+      setAutoCycleTimers(prev => ({ ...prev, [collectionId]: newTimer }));
+    }
+  };
+
+  // Handle background selection for collections
+  const handleCollectionBackgroundSelect = (collectionId: string) => {
+    setBackgroundTargetCollection(collectionId);
+    setMyMediaModalOpen(true);
+  };
+
+  // Handle background removal for collections
+    const handleCollectionBackgroundRemove = (collectionId: string) => {
+    const song = songsList.find(s => s.id === collectionId);
+    const sermon = sermonsList.find(s => s.id === collectionId);
+    const assetDeck = assetDecksList.find(a => a.id === collectionId);
+
+    if (song) {
+      const updatedSlides = slides.map(slide => {
+        if (song.slideIds.includes(slide.id)) {
+          return {
+            ...slide,
+            html: slide.html.replace(/<!--BACKGROUND:.*?-->/g, '')
+          };
+        }
+        return slide;
+      });
+      setSlides(updatedSlides);
+    } else if (sermon) {
+      const updatedSlides = slides.map(slide => {
+        if (sermon.slideIds.includes(slide.id)) {
+          return {
+            ...slide,
+            html: slide.html.replace(/<!--BACKGROUND:.*?-->/g, '')
+          };
+        }
+        return slide;
+      });
+      setSlides(updatedSlides);
+    } else if (assetDeck) {
+      const updatedSlides = slides.map(slide => {
+        if (assetDeck.slideIds.includes(slide.id)) {
+          return {
+            ...slide,
+            html: slide.html.replace(/<!--BACKGROUND:.*?-->/g, '')
+          };
+        }
+        return slide;
+      });
+      setSlides(updatedSlides);
+    }
+
+    setCollectionsWithBackgrounds(prev => prev.filter(id => id !== collectionId));
+  };
+
+  // Second display connection functions
+  const handleConnectToSecondDisplay = () => {
+    if (isConnectedToSecondDisplay) {
+      // Disconnect
+      if (secondDisplayWindow && !secondDisplayWindow.closed) {
+        secondDisplayWindow.close();
+      }
+      setIsConnectedToSecondDisplay(false);
+      setSecondDisplayWindow(null);
+    } else {
+      // Connect
+      const activeSlide = getActiveSlide();
+      if (!activeSlide) {
+        alert('Please select an active slide first');
+        return;
+      }
+
+      const newWindow = window.open(
+        '/second-display.html',
+        'secondDisplay',
+        'width=1920,height=1080,fullscreen=yes,scrollbars=no,resizable=no'
+      );
+
+      if (newWindow) {
+        setSecondDisplayWindow(newWindow);
+        setIsConnectedToSecondDisplay(true);
+        
+        // Send the active slide data immediately and after load
+        newWindow.postMessage({
+          type: 'SLIDE_DATA',
+          slide: activeSlide
+        }, '*');
+        
+        newWindow.addEventListener('load', () => {
+          newWindow.postMessage({
+            type: 'SLIDE_DATA',
+            slide: activeSlide
+          }, '*');
+        });
+      } else {
+        alert('Failed to open second display window. Please allow popups for this site.');
+      }
+    }
+  };
+
+  // Update second display when active slide changes
+  useEffect(() => {
+    if (isConnectedToSecondDisplay && secondDisplayWindow && !secondDisplayWindow.closed) {
+      const activeSlide = getActiveSlide();
+      if (activeSlide) {
+        secondDisplayWindow.postMessage({
+          type: 'SLIDE_DATA',
+          slide: activeSlide
+        }, '*');
+      }
+    }
+  }, [activeSlide, isConnectedToSecondDisplay, secondDisplayWindow]);
+
+  // Listen for messages from second display window
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'REQUEST_SLIDE_DATA') {
+        const activeSlide = getActiveSlide();
+        console.log('Second display requested slide data:', activeSlide);
+        if (activeSlide && secondDisplayWindow) {
+          secondDisplayWindow.postMessage({
+            type: 'SLIDE_DATA',
+            slide: activeSlide
+          }, '*');
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [secondDisplayWindow]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(autoCycleTimers).forEach(timer => {
+        if (timer) clearInterval(timer);
+      });
+    };
+  }, [autoCycleTimers]);
+
   return (
     <div className="App">
       {/* Module Navigation Tabs */}
@@ -1349,19 +1741,19 @@ function App() {
           >
             Songs
           </button>
-          <button
+          <button 
             className={`tab ${activeModule === 'sermons' ? 'active' : ''}`}
             onClick={() => setActiveModule('sermons')}
           >
             Sermons
           </button>
-          <button
+          <button 
             className={`tab ${activeModule === 'asset-decks' ? 'active' : ''}`}
             onClick={() => setActiveModule('asset-decks')}
           >
             Asset Decks
           </button>
-          <button
+          <button 
             className={`tab ${activeModule === 'flows' ? 'active' : ''}`}
             onClick={() => setActiveModule('flows')}
           >
@@ -1441,14 +1833,14 @@ function App() {
               
               {/* Slide Editor or Welcome Message */}
               {editingSlide ? (
-                <SlideEditorModal 
+              <SlideEditorModal 
                   key={editingSlide.id} // Force re-render when slide changes
                   slide={editingSlide}
-                  isOpen={true}
-                  onClose={() => {}} // No-op since it's not a modal
-                  onSave={handleSaveSlide}
-                  isEmbedded={true}
-                />
+                isOpen={true}
+                onClose={() => {}} // No-op since it's not a modal
+                onSave={handleSaveSlide}
+                isEmbedded={true}
+              />
               ) : (
                 <div className="asset-decks-welcome">
                   <div className="welcome-content">
@@ -1569,24 +1961,24 @@ function App() {
                                   song.title.toLowerCase().includes(flowsSearchTerm.toLowerCase())
                                 )
                                 .map((song) => (
-                                <div
-                                  key={song.id}
-                                  className="draggable-item"
-                                  draggable
-                                  onDragStart={(e) => {
-                                    e.dataTransfer.setData('text/plain', JSON.stringify({
-                                      type: 'song',
-                                      id: song.id,
-                                      title: song.title
-                                    }));
-                                  }}
-                                >
-                                  🎵 {song.title}
-                                </div>
-                              ))}
-                            </div>
+                              <div
+                                key={song.id}
+                                className="draggable-item"
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', JSON.stringify({
+                                    type: 'song',
+                                    id: song.id,
+                                    title: song.title
+                                  }));
+                                }}
+                              >
+                                🎵 {song.title}
+                              </div>
+                            ))}
                           </div>
-                          
+                        </div>
+                        
                           {/* Sermons Section */}
                           <div className="collection-section">
                             <h4 className="section-title">Sermons</h4>
@@ -1597,24 +1989,24 @@ function App() {
                                   sermon.title.toLowerCase().includes(flowsSearchTerm.toLowerCase())
                                 )
                                 .map((sermon) => (
-                                <div
-                                  key={sermon.id}
-                                  className="draggable-item"
-                                  draggable
-                                  onDragStart={(e) => {
-                                    e.dataTransfer.setData('text/plain', JSON.stringify({
-                                      type: 'sermon',
-                                      id: sermon.id,
-                                      title: sermon.title
-                                    }));
-                                  }}
-                                >
-                                  📖 {sermon.title}
-                                </div>
-                              ))}
-                            </div>
+                              <div
+                                key={sermon.id}
+                                className="draggable-item"
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', JSON.stringify({
+                                    type: 'sermon',
+                                    id: sermon.id,
+                                    title: sermon.title
+                                  }));
+                                }}
+                              >
+                                📖 {sermon.title}
+                              </div>
+                            ))}
                           </div>
-                          
+                        </div>
+                        
                           {/* Asset Decks Section */}
                           <div className="collection-section">
                             <h4 className="section-title">Asset Decks</h4>
@@ -1625,21 +2017,21 @@ function App() {
                                   assetDeck.title.toLowerCase().includes(flowsSearchTerm.toLowerCase())
                                 )
                                 .map((assetDeck) => (
-                                <div
-                                  key={assetDeck.id}
-                                  className="draggable-item"
-                                  draggable
-                                  onDragStart={(e) => {
-                                    e.dataTransfer.setData('text/plain', JSON.stringify({
-                                      type: 'asset-deck',
-                                      id: assetDeck.id,
-                                      title: assetDeck.title
-                                    }));
-                                  }}
-                                >
-                                  📚 {assetDeck.title}
-                                </div>
-                              ))}
+                              <div
+                                key={assetDeck.id}
+                                className="draggable-item"
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', JSON.stringify({
+                                    type: 'asset-deck',
+                                    id: assetDeck.id,
+                                    title: assetDeck.title
+                                  }));
+                                }}
+                              >
+                                📚 {assetDeck.title}
+                              </div>
+                            ))}
                             </div>
                           </div>
                         </div>
@@ -1686,9 +2078,9 @@ function App() {
                                   
                                   // Add collections to the unified array
                                   selectedFlow.listOfLists.forEach((collectionId, index) => {
-                                    const song = songsList.find(s => s.id === collectionId);
-                                    const sermon = sermonsList.find(s => s.id === collectionId);
-                                    const assetDeck = assetDecksList.find(a => a.id === collectionId);
+                                  const song = songsList.find(s => s.id === collectionId);
+                                  const sermon = sermonsList.find(s => s.id === collectionId);
+                                  const assetDeck = assetDecksList.find(a => a.id === collectionId);
                                     
                                     const collection = song || sermon || assetDeck;
                                     if (collection) {
@@ -1737,15 +2129,15 @@ function App() {
                                       const song = songsList.find(s => s.id === item.id);
                                       const sermon = sermonsList.find(s => s.id === item.id);
                                       const assetDeck = assetDecksList.find(a => a.id === item.id);
-                                      
-                                      const collection = song || sermon || assetDeck;
-                                      const icon = song ? '🎵' : sermon ? '📖' : assetDeck ? '📚' : '📄';
-                                      
-                                      return (
-                                        <div 
+                                  
+                                  const collection = song || sermon || assetDeck;
+                                  const icon = song ? '🎵' : sermon ? '📖' : assetDeck ? '📚' : '📄';
+                                  
+                                  return (
+                                    <div 
                                           key={`collection-${item.originalIndex}`} 
                                           className={`flow-item draggable-flow-item ${draggedItem?.type === 'collection' && draggedItem?.index === unifiedIndex ? 'dragging' : ''} ${selectedFlowCollection?.id === item.id ? 'selected' : ''}`}
-                                          draggable
+                                      draggable
                                           onClick={() => {
                                             const song = songsList.find(s => s.id === item.id);
                                             const sermon = sermonsList.find(s => s.id === item.id);
@@ -1759,138 +2151,138 @@ function App() {
                                               handleFlowCollectionClick(item.id, 'asset-deck');
                                             }
                                           }}
-                                          onDragStart={(e) => {
+                                      onDragStart={(e) => {
                                             setDraggedItem({ type: 'collection', index: unifiedIndex });
-                                            e.dataTransfer.setData('text/plain', JSON.stringify({
-                                              type: 'collection',
+                                        e.dataTransfer.setData('text/plain', JSON.stringify({
+                                          type: 'collection',
                                               index: unifiedIndex,
                                               collectionId: item.id,
-                                              isInternal: true
-                                            }));
-                                          }}
-                                          onDragEnd={() => {
-                                            setDraggedItem(null);
-                                          }}
-                                          onDragOver={(e) => {
-                                            e.preventDefault();
-                                            e.currentTarget.classList.add('drag-over');
-                                          }}
-                                          onDragLeave={(e) => {
-                                            e.currentTarget.classList.remove('drag-over');
-                                          }}
-                                          onDrop={(e) => {
-                                            e.preventDefault();
-                                            e.currentTarget.classList.remove('drag-over');
-                                            try {
-                                              const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-                                              if (data.isInternal && (data.type === 'collection' || data.type === 'note')) {
+                                          isInternal: true
+                                        }));
+                                      }}
+                                      onDragEnd={() => {
+                                        setDraggedItem(null);
+                                      }}
+                                      onDragOver={(e) => {
+                                        e.preventDefault();
+                                        e.currentTarget.classList.add('drag-over');
+                                      }}
+                                      onDragLeave={(e) => {
+                                        e.currentTarget.classList.remove('drag-over');
+                                      }}
+                                      onDrop={(e) => {
+                                        e.preventDefault();
+                                        e.currentTarget.classList.remove('drag-over');
+                                        try {
+                                          const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                          if (data.isInternal && (data.type === 'collection' || data.type === 'note')) {
                                                 handleReorderFlowItems(data.index, unifiedIndex, data.type);
-                                              }
-                                            } catch (error) {
-                                              console.error('Error reordering flow items:', error);
-                                            }
-                                          }}
-                                        >
-                                          <span className="flow-item-content">
+                                          }
+                                        } catch (error) {
+                                          console.error('Error reordering flow items:', error);
+                                        }
+                                      }}
+                                    >
+                                      <span className="flow-item-content">
                                             {icon} {collection?.title || `Collection ${item.originalIndex + 1}`}
-                                          </span>
-                                          <button 
-                                            className="delete-flow-item"
+                                      </span>
+                                      <button 
+                                        className="delete-flow-item"
                                             onClick={(e) => {
                                               e.stopPropagation(); // Prevent triggering the parent click
-                                              const updatedFlow = {
-                                                ...selectedFlow,
+                                          const updatedFlow = {
+                                            ...selectedFlow,
                                                 listOfLists: selectedFlow.listOfLists.filter((_, i) => i !== item.originalIndex),
-                                                updatedAt: new Date()
-                                              };
-                                              setFlowsList(prev => prev.map(flow => 
-                                                flow.id === selectedFlow.id ? updatedFlow : flow
-                                              ));
-                                              setSelectedFlow(updatedFlow);
-                                            }}
-                                            title="Remove from flow"
-                                          >
-                                            🗑️
-                                          </button>
-                                        </div>
-                                      );
+                                            updatedAt: new Date()
+                                          };
+                                          setFlowsList(prev => prev.map(flow => 
+                                            flow.id === selectedFlow.id ? updatedFlow : flow
+                                          ));
+                                          setSelectedFlow(updatedFlow);
+                                        }}
+                                        title="Remove from flow"
+                                      >
+                                        🗑️
+                                      </button>
+                                    </div>
+                                  );
                                     } else if (item.type === 'note') {
                                       return (
-                                        <div 
+                                  <div 
                                           key={`note-${item.originalIndex}`} 
                                           className={`flow-item note-flow-item draggable-flow-item ${draggedItem?.type === 'note' && draggedItem?.index === unifiedIndex ? 'dragging' : ''}`}
-                                          draggable
-                                          onDragStart={(e) => {
+                                    draggable
+                                    onDragStart={(e) => {
                                             setDraggedItem({ type: 'note', index: unifiedIndex });
-                                            e.dataTransfer.setData('text/plain', JSON.stringify({
-                                              type: 'note',
+                                      e.dataTransfer.setData('text/plain', JSON.stringify({
+                                        type: 'note',
                                               index: unifiedIndex,
                                               note: item.note,
                                               position: item.position,
-                                              isInternal: true
-                                            }));
-                                          }}
-                                          onDragEnd={() => {
-                                            setDraggedItem(null);
-                                          }}
-                                          onDragOver={(e) => {
-                                            e.preventDefault();
-                                            e.currentTarget.classList.add('drag-over');
-                                          }}
-                                          onDragLeave={(e) => {
-                                            e.currentTarget.classList.remove('drag-over');
-                                          }}
-                                          onDrop={(e) => {
-                                            e.preventDefault();
-                                            e.currentTarget.classList.remove('drag-over');
-                                            try {
-                                              const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-                                              if (data.isInternal && (data.type === 'collection' || data.type === 'note')) {
+                                        isInternal: true
+                                      }));
+                                    }}
+                                    onDragEnd={() => {
+                                      setDraggedItem(null);
+                                    }}
+                                    onDragOver={(e) => {
+                                      e.preventDefault();
+                                      e.currentTarget.classList.add('drag-over');
+                                    }}
+                                    onDragLeave={(e) => {
+                                      e.currentTarget.classList.remove('drag-over');
+                                    }}
+                                    onDrop={(e) => {
+                                      e.preventDefault();
+                                      e.currentTarget.classList.remove('drag-over');
+                                      try {
+                                        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                        if (data.isInternal && (data.type === 'collection' || data.type === 'note')) {
                                                 handleReorderFlowItems(data.index, unifiedIndex, data.type);
-                                              }
-                                            } catch (error) {
-                                              console.error('Error reordering flow items:', error);
-                                            }
-                                          }}
-                                        >
-                                          <input
-                                            type="text"
+                                        }
+                                      } catch (error) {
+                                        console.error('Error reordering flow items:', error);
+                                      }
+                                    }}
+                                  >
+                                    <input
+                                      type="text"
                                             value={item.note || ''}
-                                            onChange={(e) => {
-                                              const updatedFlow = {
-                                                ...selectedFlow,
-                                                listOfNotes: selectedFlow.listOfNotes.map((n, i) => 
+                                      onChange={(e) => {
+                                        const updatedFlow = {
+                                          ...selectedFlow,
+                                          listOfNotes: selectedFlow.listOfNotes.map((n, i) => 
                                                   i === item.originalIndex ? e.target.value : n
-                                                ),
-                                                updatedAt: new Date()
-                                              };
-                                              setFlowsList(prev => prev.map(flow => 
-                                                flow.id === selectedFlow.id ? updatedFlow : flow
-                                              ));
-                                              setSelectedFlow(updatedFlow);
-                                            }}
-                                            className="note-input"
-                                            placeholder="Type your note..."
-                                          />
-                                          <button 
-                                            className="delete-flow-item"
-                                            onClick={() => {
-                                              const updatedFlow = {
-                                                ...selectedFlow,
+                                          ),
+                                          updatedAt: new Date()
+                                        };
+                                        setFlowsList(prev => prev.map(flow => 
+                                          flow.id === selectedFlow.id ? updatedFlow : flow
+                                        ));
+                                        setSelectedFlow(updatedFlow);
+                                      }}
+                                      className="note-input"
+                                      placeholder="Type your note..."
+                                    />
+                                    <button 
+                                      className="delete-flow-item"
+                                      onClick={() => {
+                                        const updatedFlow = {
+                                          ...selectedFlow,
                                                 listOfNotes: selectedFlow.listOfNotes.filter((_, i) => i !== item.originalIndex),
                                                 listOfNotePosition: selectedFlow.listOfNotePosition.filter((_, i) => i !== item.originalIndex),
-                                                updatedAt: new Date()
-                                              };
-                                              setFlowsList(prev => prev.map(flow => 
-                                                flow.id === selectedFlow.id ? updatedFlow : flow
-                                              ));
-                                              setSelectedFlow(updatedFlow);
-                                            }}
-                                            title="Remove from flow"
-                                          >
-                                            🗑️
-                                          </button>
-                                        </div>
+                                          updatedAt: new Date()
+                                        };
+                                        setFlowsList(prev => prev.map(flow => 
+                                          flow.id === selectedFlow.id ? updatedFlow : flow
+                                        ));
+                                        setSelectedFlow(updatedFlow);
+                                      }}
+                                      title="Remove from flow"
+                                    >
+                                      🗑️
+                                    </button>
+                                  </div>
                                       );
                                     }
                                     return null;
@@ -2088,6 +2480,324 @@ function App() {
         }}
         onSelectMedia={handleMediaSelect}
       />
+
+      {/* Presentation Module */}
+      {activeModule === 'presentation' && (
+        <div className="presentation-module">
+          {/* Left Sidebar - Flows or Flow Collections */}
+          <div className="presentation-sidebar">
+            {!selectedPresentationFlow ? (
+              // Show flows list when no flow is selected
+              <div className="flows-selection">
+                <div className="sidebar-title">Select a Flow</div>
+                <div className="flows-list">
+                  {flowsList.map(flow => (
+                    <div 
+                      key={flow.id} 
+                      className={`flow-item ${selectedPresentationFlow && (selectedPresentationFlow as IFlow).id === flow.id ? 'selected' : ''}`}
+                      onClick={() => {
+                        // Only set the flow if it's not already selected
+                        const isCurrentlySelected = selectedPresentationFlow && (selectedPresentationFlow as IFlow).id === flow.id;
+                        if (!isCurrentlySelected) {
+                          setSelectedPresentationFlow(flow);
+                          setActiveSlide(null);
+                          // Clear active state from all slides when flow changes
+                          const clearedSlides = slides.map(s => ({
+                            ...s,
+                            html: s.html.replace(/ data-active="true"/g, '').replace(/ class="[^"]*active[^"]*"/g, (match) => {
+                              return match.replace(/active/g, '').replace(/\s+/g, ' ').trim();
+                            })
+                          }));
+                          setSlides(clearedSlides);
+                        }
+                      }}
+                    >
+                      {flow.title}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              // Show collections within the selected flow
+              <div className="flow-collections">
+                <div className="sidebar-header">
+                  <button 
+                    className="back-button"
+                    onClick={() => {
+                      setSelectedPresentationFlow(null);
+                      setActiveSlide(null);
+                      // Clear active state from all slides when going back
+                      const clearedSlides = slides.map(s => ({
+                        ...s,
+                        html: s.html.replace(/ data-active="true"/g, '').replace(/ class="[^"]*active[^"]*"/g, (match) => {
+                          return match.replace(/active/g, '').replace(/\s+/g, ' ').trim();
+                        })
+                      }));
+                      setSlides(clearedSlides);
+                    }}
+                  >
+                    ← Back to Flows
+                  </button>
+                  <div className="flow-title">{selectedPresentationFlow.title}</div>
+                </div>
+                <div className="collections-list">
+                  {(() => {
+                    const flowItems: Array<{
+                      type: 'collection' | 'note';
+                      id: string;
+                      title: string;
+                      slides?: ISlide[];
+                      noteText?: string;
+                    }> = [];
+
+                    // Add collections
+                    selectedPresentationFlow.listOfLists.forEach((collectionId, index) => {
+                      const song = songsList.find(s => s.id === collectionId);
+                      const sermon = sermonsList.find(s => s.id === collectionId);
+                      const assetDeck = assetDecksList.find(a => a.id === collectionId);
+
+                      if (song) {
+                        const songSlides = slides.filter(slide => song.slideIds.includes(slide.id));
+                        flowItems.push({
+                          type: 'collection',
+                          id: song.id,
+                          title: `Song: ${song.title}`,
+                          slides: songSlides
+                        });
+                      } else if (sermon) {
+                        const sermonSlides = slides.filter(slide => sermon.slideIds.includes(slide.id));
+                        flowItems.push({
+                          type: 'collection',
+                          id: sermon.id,
+                          title: `Sermon: ${sermon.title}`,
+                          slides: sermonSlides
+                        });
+                      } else if (assetDeck) {
+                        const assetSlides = slides.filter(slide => assetDeck.slideIds.includes(slide.id));
+                        flowItems.push({
+                          type: 'collection',
+                          id: assetDeck.id,
+                          title: `Asset Deck: ${assetDeck.title}`,
+                          slides: assetSlides
+                        });
+                      }
+                    });
+
+                    // Add notes
+                    selectedPresentationFlow.listOfNotes.forEach((noteText, index) => {
+                      flowItems.push({
+                        type: 'note',
+                        id: `note-${index}`,
+                        title: 'Note',
+                        noteText: noteText
+                      });
+                    });
+
+                    return flowItems.map((item, index) => (
+                      <div key={item.id} className="collection-item">
+                        {item.type === 'note' ? (
+                          <div className="note-item">
+                            <span className="note-icon">📝</span>
+                            <span className="note-text">{item.noteText}</span>
+                          </div>
+                        ) : (
+                          <div className="collection-item-content">
+                            <div className="collection-title">{item.title}</div>
+                            {item.slides && item.slides.length > 0 && (
+                              <div className="slide-count">{item.slides.length} slides</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Main Content Area */}
+          <div className="presentation-main-content">
+            {selectedPresentationFlow ? (
+              <div className="presentation-flow-display">
+                {/* Flow Title */}
+                <div className="presentation-flow-title">
+                  <h2>{selectedPresentationFlow.title}</h2>
+                </div>
+
+                {/* Collection Slides Grid */}
+                {selectedCollection ? (
+                  <div className="collection-slides-display">
+                    {selectedCollection.type === 'note' ? (
+                      <div className="note-display">
+                        <p>{selectedCollection.noteText}</p>
+                      </div>
+                    ) : selectedCollection.slides && selectedCollection.slides.length > 0 ? (
+                      <div className="slides-grid">
+                        <SlideGrid
+                          slides={selectedCollection.slides}
+                          onSlideClick={(slide) => handleSlideActivation(slide)} // Updated to use handleSlideActivation
+                        />
+                      </div>
+                    ) : (
+                      <div className="no-slides">
+                        <p>No slides available for this collection.</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flow-items-display">
+                    {(() => {
+                      const flowItems: Array<{
+                        type: 'collection' | 'note';
+                        id: string;
+                        title: string;
+                        content?: string;
+                        slides?: ISlide[];
+                      }> = [];
+
+                      // Add collections
+                      selectedPresentationFlow.listOfLists.forEach((collectionId, index) => {
+                        const song = songsList.find(s => s.id === collectionId);
+                        const sermon = sermonsList.find(s => s.id === collectionId);
+                        const assetDeck = assetDecksList.find(a => a.id === collectionId);
+
+                        if (song) {
+                          const songSlides = slides.filter(slide => song.slideIds.includes(slide.id));
+                          flowItems.push({
+                            type: 'collection',
+                            id: song.id,
+                            title: song.title,
+                            slides: songSlides
+                          });
+                        } else if (sermon) {
+                          const sermonSlides = slides.filter(slide => sermon.slideIds.includes(slide.id));
+                          flowItems.push({
+                            type: 'collection',
+                            id: sermon.id,
+                            title: sermon.title,
+                            slides: sermonSlides
+                          });
+                        } else if (assetDeck) {
+                          const assetSlides = slides.filter(slide => assetDeck.slideIds.includes(slide.id));
+                          flowItems.push({
+                            type: 'collection',
+                            id: assetDeck.id,
+                            title: assetDeck.title,
+                            slides: assetSlides
+                          });
+                        }
+                      });
+
+                      // Add notes
+                      selectedPresentationFlow.listOfNotes.forEach((note, index) => {
+                        flowItems.push({
+                          type: 'note',
+                          id: `note-${index}`,
+                          title: `Note ${index + 1}`,
+                          content: note
+                        });
+                      });
+
+                      return flowItems.map((item, index) => (
+                        <div key={item.id} className="flow-item-section">
+                          <div className="flow-item-label">
+                            <span className="flow-item-title">
+                              {item.type === 'note' ? item.content : item.title}
+                            </span>
+                            {item.type === 'collection' && item.slides && item.slides.length > 0 && (
+                              <div className="auto-cycle-controls">
+                                <select
+                                  className="timing-dropdown"
+                                  value={autoCycleTiming[item.id] || 1000}
+                                  onChange={(e) => handleTimingChange(item.id, parseInt(e.target.value))}
+                                  title="Auto-cycle timing"
+                                >
+                                  <option value={1000}>1s</option>
+                                  <option value={5000}>5s</option>
+                                  <option value={10000}>10s</option>
+                                  <option value={30000}>30s</option>
+                                </select>
+                                <button
+                                  className={`auto-cycle-button ${autoCycleStates[item.id] ? 'active' : ''}`}
+                                  onClick={() => handleAutoCycle(item.id, item.slides!)}
+                                  title={autoCycleStates[item.id] ? 'Stop Auto-Cycle' : 'Start Auto-Cycle'}
+                                >
+                                  {autoCycleStates[item.id] ? '⏸️' : '▶️'}
+                                </button>
+                                <button
+                                  className="background-button"
+                                  onClick={() => collectionsWithBackgrounds.includes(item.id) 
+                                    ? handleCollectionBackgroundRemove(item.id)
+                                    : handleCollectionBackgroundSelect(item.id)
+                                  }
+                                  title={collectionsWithBackgrounds.includes(item.id) ? 'Remove background' : 'Add background'}
+                                >
+                                  {collectionsWithBackgrounds.includes(item.id) ? '❌' : '🖼️'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          {item.type === 'collection' && item.slides && (
+                            <div className="presentation-slides-grid">
+                              <SlideGrid
+                                slides={item.slides}
+                                onSlideClick={(slide) => handleSlideActivation(slide)} // Updated to use handleSlideActivation
+                              />
+                            </div>
+                          )}
+                          {index < flowItems.length - 1 && <div className="flow-item-divider" />}
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="presentation-welcome">
+                <div className="welcome-content">
+                  <h2>Welcome to Presentation Mode</h2>
+                  <p>Select a flow from the sidebar to begin presenting.</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Top-Right Active Slide Window */}
+          <div className="presentation-active-slide">
+            {getActiveSlide() ? (
+              <div className="active-slide-container">
+                <div className="active-slide-title">
+                  <h3>Active Slide</h3>
+                </div>
+                <div className="active-slide-content">
+                  <SlideRenderer
+                    slide={getActiveSlide()!}
+                    editMode={false}
+                    onTextEdit={() => {}} // No editing in presentation mode
+                  />
+                </div>
+                <div className="connect-button-container">
+                  <button
+                    className={`connect-button ${isConnectedToSecondDisplay ? 'connected' : ''}`}
+                    onClick={handleConnectToSecondDisplay}
+                    title={isConnectedToSecondDisplay ? 'Disconnect from second display' : 'Connect to second display'}
+                  >
+                    {isConnectedToSecondDisplay ? '🔌 Disconnect' : '🔗 Connect'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="active-slide-placeholder">
+                <div className="placeholder-content">
+                  <h3>Active Slide</h3>
+                  <p>Click on a slide to preview it here</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
