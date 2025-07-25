@@ -7,7 +7,7 @@ interface CreateItemModalProps {
   onSubmit: (title: string) => void;
   title: string;
   placeholder: string;
-  itemType: 'song' | 'sermon' | 'asset-deck';
+  itemType: 'song' | 'sermon' | 'asset-deck' | 'flow';
 }
 
 const CreateItemModal: React.FC<CreateItemModalProps> = ({

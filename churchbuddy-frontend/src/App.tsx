@@ -11,6 +11,7 @@ import { ISlide } from './types/ISlide';
 import { ISong } from './types/ISong';
 import { ISermon } from './types/ISermon';
 import { IAssetDeck } from './types/IAssetDeck';
+import { IFlow } from './types/IFlow';
 import apiService from './services/api';
 
 function App() {
@@ -20,9 +21,24 @@ function App() {
   const [songsContent, setSongsContent] = useState('');
   const [sermonsContent, setSermonsContent] = useState('');
   const [showSongTitleModal, setShowSongTitleModal] = useState(false);
-  const [songsList, setSongsList] = useState<ISong[]>([]);
+  const [songsList, setSongsList] = useState<ISong[]>([
+    { id: 'song-1', title: 'Amazing Grace', description: 'Amazing grace, how sweet the sound...', slideIds: [], createdAt: new Date(), updatedAt: new Date() },
+    { id: 'song-2', title: 'How Great Thou Art', description: 'O Lord my God, when I in awesome wonder...', slideIds: [], createdAt: new Date(), updatedAt: new Date() },
+    { id: 'song-3', title: 'It Is Well', description: 'When peace like a river attendeth my way...', slideIds: [], createdAt: new Date(), updatedAt: new Date() }
+  ]);
+  
+  const [sermonsList, setSermonsList] = useState<ISermon[]>([
+    { id: 'sermon-1', title: 'The Prodigal Son', description: 'Luke 15:11-32...', slideIds: [], createdAt: new Date(), updatedAt: new Date() },
+    { id: 'sermon-2', title: 'Walking in Faith', description: 'Hebrews 11:1...', slideIds: [], createdAt: new Date(), updatedAt: new Date() },
+    { id: 'sermon-3', title: 'God\'s Love', description: 'John 3:16...', slideIds: [], createdAt: new Date(), updatedAt: new Date() }
+  ]);
+  
+  const [assetDecksList, setAssetDecksList] = useState<IAssetDeck[]>([
+    { id: 'deck-1', title: 'Welcome Slides', slideIds: [], createdAt: new Date(), updatedAt: new Date() },
+    { id: 'deck-2', title: 'Announcements', slideIds: [], createdAt: new Date(), updatedAt: new Date() },
+    { id: 'deck-3', title: 'Prayer Requests', slideIds: [], createdAt: new Date(), updatedAt: new Date() }
+  ]);
   const [selectedSong, setSelectedSong] = useState<ISong | null>(null);
-  const [sermonsList, setSermonsList] = useState<ISermon[]>([]);
   const [selectedSermon, setSelectedSermon] = useState<ISermon | null>(null);
   const [showSermonTitleModal, setShowSermonTitleModal] = useState(false);
   const [myMediaModalOpen, setMyMediaModalOpen] = useState(false);
@@ -32,10 +48,14 @@ function App() {
   const [isPreachMode, setIsPreachMode] = useState(false);
   
   // Asset Decks state
-  const [assetDecksList, setAssetDecksList] = useState<IAssetDeck[]>([]);
   const [selectedAssetDeck, setSelectedAssetDeck] = useState<IAssetDeck | null>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [showAssetDeckTitleModal, setShowAssetDeckTitleModal] = useState(false);
+  
+  // Flows state
+  const [flowsList, setFlowsList] = useState<IFlow[]>([]);
+  const [selectedFlow, setSelectedFlow] = useState<IFlow | null>(null);
+  const [showFlowTitleModal, setShowFlowTitleModal] = useState(false);
   
   const [currentSlide] = useState<ISlide>({
     id: '1',
@@ -778,6 +798,303 @@ function App() {
     }
   };
 
+  // Flows handlers
+  const handleMakeNewFlow = () => {
+    setShowFlowTitleModal(true);
+  };
+
+  const handleFlowSelect = (flowTitle: string) => {
+    const flow = flowsList.find(f => f.title === flowTitle);
+    if (flow) {
+      setSelectedFlow(flow);
+      console.log('Selected flow:', flow);
+    }
+  };
+
+  const handleCreateFlow = (title: string) => {
+    const newFlow: IFlow = {
+      id: `flow-${Date.now()}`,
+      title,
+      listOfLists: [],
+      listOfNotes: [],
+      listOfNotePosition: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    setFlowsList(prev => [...prev, newFlow]);
+    setSelectedFlow(newFlow);
+    setShowFlowTitleModal(false);
+    
+    console.log('Created new flow:', newFlow);
+  };
+
+  const handleAddCollectionToFlow = (collectionId: string, collectionType: 'song' | 'sermon' | 'asset-deck') => {
+    if (selectedFlow) {
+      const updatedFlow = {
+        ...selectedFlow,
+        listOfLists: [...selectedFlow.listOfLists, collectionId],
+        updatedAt: new Date()
+      };
+      
+      setFlowsList(prev => prev.map(flow => 
+        flow.id === selectedFlow.id ? updatedFlow : flow
+      ));
+      setSelectedFlow(updatedFlow);
+      
+      console.log('Added collection to flow:', collectionId);
+    }
+  };
+
+  const handleAddNoteToFlow = (note: string, position: number) => {
+    if (selectedFlow) {
+      const updatedFlow = {
+        ...selectedFlow,
+        listOfNotes: [...selectedFlow.listOfNotes, note],
+        listOfNotePosition: [...selectedFlow.listOfNotePosition, position],
+        updatedAt: new Date()
+      };
+      
+      setFlowsList(prev => prev.map(flow => 
+        flow.id === selectedFlow.id ? updatedFlow : flow
+      ));
+      setSelectedFlow(updatedFlow);
+      
+      console.log('Added note to flow:', note, 'at position:', position);
+    }
+  };
+
+  const handlePrintFlow = () => {
+    if (selectedFlow) {
+      console.log('Printing flow:', selectedFlow.title);
+      
+      // Create a unified array of flow items (collections and notes mixed)
+      const flowItems: Array<{type: 'collection' | 'note', id: string, title: string, note?: string, position?: number}> = [];
+      
+      // Add collections to the unified array
+      selectedFlow.listOfLists.forEach((collectionId, index) => {
+        const song = songsList.find(s => s.id === collectionId);
+        const sermon = sermonsList.find(s => s.id === collectionId);
+        const assetDeck = assetDecksList.find(a => a.id === collectionId);
+        
+        const collection = song || sermon || assetDeck;
+        if (collection) {
+          flowItems.push({
+            type: 'collection',
+            id: collectionId,
+            title: collection.title
+          });
+        }
+      });
+      
+      // Add notes to the unified array at their specified positions
+      selectedFlow.listOfNotes.forEach((note, noteIndex) => {
+        const position = selectedFlow.listOfNotePosition[noteIndex];
+        flowItems.splice(position, 0, {
+          type: 'note',
+          id: `note-${noteIndex}`,
+          title: note,
+          note: note,
+          position: position
+        });
+      });
+      
+      // Sort the unified array by actual position in the flow
+      flowItems.sort((a, b) => {
+        if (a.type === 'collection' && b.type === 'collection') {
+          return selectedFlow.listOfLists.indexOf(a.id) - selectedFlow.listOfLists.indexOf(b.id);
+        }
+        if (a.type === 'note' && b.type === 'note') {
+          return (a.position || 0) - (b.position || 0);
+        }
+        // Notes should be positioned relative to collections
+        if (a.type === 'note') {
+          return (a.position || 0) - selectedFlow.listOfLists.indexOf(b.id);
+        }
+        if (b.type === 'note') {
+          return selectedFlow.listOfLists.indexOf(a.id) - (b.position || 0);
+        }
+        return 0;
+      });
+      
+      // Generate HTML for printing
+      const printHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${selectedFlow.title} - ChurchBuddy Flow</title>
+          <style>
+            @media print {
+              body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+              .header { display: flex; align-items: center; margin-bottom: 20px; }
+              .logo { width: 50px; height: 50px; background: #667eea; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 15px; }
+              .flow-title { font-size: 24px; font-weight: bold; }
+              .flow-subtitle { font-size: 16px; color: #666; margin-top: 5px; }
+              .flow-item { 
+                padding: 12px 15px; 
+                margin: 2px 0; 
+                border-radius: 6px; 
+                border-left: 4px solid #667eea;
+                background: white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+              }
+              .note-item { 
+                background: #f5f5f5 !important; 
+                border-left-color: #FFC107;
+                color: #666;
+                font-style: italic;
+              }
+              .item-title { font-weight: bold; font-size: 14px; }
+              .divider { height: 1px; background: #eee; margin: 8px 0; }
+              .page-break { page-break-before: always; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo">CB</div>
+            <div>
+              <div class="flow-title">${selectedFlow.title}</div>
+              <div class="flow-subtitle">ChurchBuddy Flow</div>
+            </div>
+          </div>
+          
+          ${flowItems.map((item, index) => {
+            if (item.type === 'collection') {
+              const song = songsList.find(s => s.id === item.id);
+              const sermon = sermonsList.find(s => s.id === item.id);
+              const assetDeck = assetDecksList.find(a => a.id === item.id);
+              
+              const collection = song || sermon || assetDeck;
+              const icon = song ? '🎵' : sermon ? '📖' : assetDeck ? '📚' : '📄';
+              
+              return `
+                <div class="flow-item">
+                  <div class="item-title">${icon} ${collection?.title || `Collection ${index + 1}`}</div>
+                </div>
+                ${index < flowItems.length - 1 ? '<div class="divider"></div>' : ''}
+              `;
+            } else if (item.type === 'note') {
+              return `
+                <div class="flow-item note-item">
+                  <div class="item-title">📝 ${item.note || 'Note'}</div>
+                </div>
+                ${index < flowItems.length - 1 ? '<div class="divider"></div>' : ''}
+              `;
+            }
+            return '';
+          }).join('')}
+        </body>
+        </html>
+      `;
+      
+      // Create a new window for printing
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(printHTML);
+        printWindow.document.close();
+        printWindow.focus();
+        
+        // Wait for content to load then print
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      }
+    }
+  };
+
+  const handleFlowCollectionClick = (collectionId: string, collectionType: 'song' | 'sermon' | 'asset-deck') => {
+    setSelectedFlowCollection({ id: collectionId, type: collectionType });
+  };
+
+  const handleReorderFlowItems = (fromIndex: number, toIndex: number, fromType: 'collection' | 'note') => {
+    if (!selectedFlow) return;
+    
+    // Create a unified array of flow items (collections and notes mixed)
+    const flowItems: Array<{type: 'collection' | 'note', id: string, title: string, note?: string, position?: number}> = [];
+    
+    // Add collections to the unified array
+    selectedFlow.listOfLists.forEach((collectionId, index) => {
+      const song = songsList.find(s => s.id === collectionId);
+      const sermon = sermonsList.find(s => s.id === collectionId);
+      const assetDeck = assetDecksList.find(a => a.id === collectionId);
+      
+      const collection = song || sermon || assetDeck;
+      if (collection) {
+        flowItems.push({
+          type: 'collection',
+          id: collectionId,
+          title: collection.title
+        });
+      }
+    });
+    
+    // Add notes to the unified array at their specified positions
+    selectedFlow.listOfNotes.forEach((note, noteIndex) => {
+      const position = selectedFlow.listOfNotePosition[noteIndex];
+      flowItems.splice(position, 0, {
+        type: 'note',
+        id: `note-${noteIndex}`,
+        title: note,
+        note: note,
+        position: position
+      });
+    });
+    
+    // Sort the unified array by actual position in the flow
+    flowItems.sort((a, b) => {
+      if (a.type === 'collection' && b.type === 'collection') {
+        return selectedFlow.listOfLists.indexOf(a.id) - selectedFlow.listOfLists.indexOf(b.id);
+      }
+      if (a.type === 'note' && b.type === 'note') {
+        return (a.position || 0) - (b.position || 0);
+      }
+      // Notes should be positioned relative to collections
+      if (a.type === 'note') {
+        return (a.position || 0) - selectedFlow.listOfLists.indexOf(b.id);
+      }
+      if (b.type === 'note') {
+        return selectedFlow.listOfLists.indexOf(a.id) - (b.position || 0);
+      }
+      return 0;
+    });
+    
+    // Move the item in the unified array
+    const itemToMove = flowItems.splice(fromIndex, 1)[0];
+    flowItems.splice(toIndex, 0, itemToMove);
+    
+    // Reconstruct the separate arrays from the unified array
+    const newListOfLists: string[] = [];
+    const newListOfNotes: string[] = [];
+    const newListOfNotePosition: number[] = [];
+    
+    flowItems.forEach((item, index) => {
+      if (item.type === 'collection') {
+        newListOfLists.push(item.id);
+      } else if (item.type === 'note') {
+        newListOfNotes.push(item.note || '');
+        newListOfNotePosition.push(index);
+      }
+    });
+    
+    const updatedFlow = {
+      ...selectedFlow,
+      listOfLists: newListOfLists,
+      listOfNotes: newListOfNotes,
+      listOfNotePosition: newListOfNotePosition,
+      updatedAt: new Date()
+    };
+    
+    setFlowsList(prev => prev.map(flow => 
+      flow.id === selectedFlow.id ? updatedFlow : flow
+    ));
+    setSelectedFlow(updatedFlow);
+  };
+
+  const [draggedItem, setDraggedItem] = useState<{type: 'collection' | 'note', index: number} | null>(null);
+  const [flowsSearchTerm, setFlowsSearchTerm] = useState<string>('');
+  const [selectedFlowCollection, setSelectedFlowCollection] = useState<{id: string, type: 'song' | 'sermon' | 'asset-deck'} | null>(null);
+
   // Get current slide from selected asset deck
   const getCurrentSlide = () => {
     if (selectedAssetDeck && selectedAssetDeck.slideIds.length > 0) {
@@ -1154,7 +1471,9 @@ function App() {
           {/* Module-aware Sidebar */}
           <Sidebar 
             activeModule={activeModule}
-            onSelectItem={(item) => console.log(`Selected ${activeModule}:`, item)}
+            onSelectItem={handleFlowSelect}
+            onMakeNew={handleMakeNewFlow}
+            customFlowsList={flowsList}
             onDeleteItem={handleDeleteItem}
             onSelectBackground={handleSelectBackground}
             onRemoveBackground={handleRemoveBackground}
@@ -1165,18 +1484,440 @@ function App() {
           <main className="App-main">
             <div className="flows-workspace">
               <div className="flows-editor">
-                <h2>Flows Module</h2>
-                <p>Flows workspace coming soon...</p>
+                {/* Flows Toolbar */}
+                <div className="flows-toolbar">
+                  <div className="toolbar-left">
+                    <button 
+                      className="toolbar-button"
+                      onClick={handlePrintFlow}
+                      title="Print flow"
+                      disabled={!selectedFlow}
+                    >
+                      🖨️ Print Flow
+                    </button>
+                  </div>
+                  
+                  <div className="toolbar-right">
+                    <span className="flow-info">
+                      {selectedFlow ? `${selectedFlow.listOfLists.length} collections, ${selectedFlow.listOfNotes.length} notes` : 'No flow selected'}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Flow Content */}
+                <div className="flow-content">
+                  {selectedFlow ? (
+                    <div className="flows-drag-drop-workspace">
+                      {/* Search Bar and Add Note */}
+                      <div className="flows-search-bar">
+                        <input
+                          type="text"
+                          placeholder="Search collections..."
+                          className="flows-search-input"
+                          value={flowsSearchTerm}
+                          onChange={(e) => setFlowsSearchTerm(e.target.value)}
+                        />
+                        <button
+                          className="add-note-button"
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', JSON.stringify({
+                              type: 'note',
+                              id: `note-${Date.now()}`,
+                              title: 'New Note'
+                            }));
+                          }}
+                          title="Drag to add note to flow"
+                        >
+                          📝 Drag and Drop Note
+                        </button>
+                      </div>
+                      
+                      {/* Drag and Drop Columns */}
+                      <div className="flows-columns">
+                        {/* Songs Column */}
+                        <div className="flow-column">
+                          <h4 className="column-title">Songs</h4>
+                          <div className="column-items">
+                            {songsList
+                              .filter(song => 
+                                flowsSearchTerm === '' || 
+                                song.title.toLowerCase().includes(flowsSearchTerm.toLowerCase())
+                              )
+                              .map((song) => (
+                              <div
+                                key={song.id}
+                                className="draggable-item"
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', JSON.stringify({
+                                    type: 'song',
+                                    id: song.id,
+                                    title: song.title
+                                  }));
+                                }}
+                              >
+                                🎵 {song.title}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* Sermons Column */}
+                        <div className="flow-column">
+                          <h4 className="column-title">Sermons</h4>
+                          <div className="column-items">
+                            {sermonsList
+                              .filter(sermon => 
+                                flowsSearchTerm === '' || 
+                                sermon.title.toLowerCase().includes(flowsSearchTerm.toLowerCase())
+                              )
+                              .map((sermon) => (
+                              <div
+                                key={sermon.id}
+                                className="draggable-item"
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', JSON.stringify({
+                                    type: 'sermon',
+                                    id: sermon.id,
+                                    title: sermon.title
+                                  }));
+                                }}
+                              >
+                                📖 {sermon.title}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* Asset Decks Column */}
+                        <div className="flow-column">
+                          <h4 className="column-title">Asset Decks</h4>
+                          <div className="column-items">
+                            {assetDecksList
+                              .filter(assetDeck => 
+                                flowsSearchTerm === '' || 
+                                assetDeck.title.toLowerCase().includes(flowsSearchTerm.toLowerCase())
+                              )
+                              .map((assetDeck) => (
+                              <div
+                                key={assetDeck.id}
+                                className="draggable-item"
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', JSON.stringify({
+                                    type: 'asset-deck',
+                                    id: assetDeck.id,
+                                    title: assetDeck.title
+                                  }));
+                                }}
+                              >
+                                📚 {assetDeck.title}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* Current Flow Column */}
+                        <div className="flow-column current-flow">
+                          <h4 className="column-title">Current Flow: {selectedFlow.title}</h4>
+                          <div 
+                            className="column-items drop-zone"
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.classList.remove('drag-over');
+                              
+                              try {
+                                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                
+                                // Only handle external drops (from source columns), ignore internal reordering
+                                if (!data.isInternal && (data.type === 'song' || data.type === 'sermon' || data.type === 'asset-deck' || data.type === 'note')) {
+                                  if (data.type === 'note') {
+                                    handleAddNoteToFlow('Click to type', selectedFlow?.listOfLists.length || 0);
+                                  } else {
+                                    handleAddCollectionToFlow(data.id, data.type);
+                                  }
+                                }
+                                // Internal reordering is handled by individual flow items
+                              } catch (error) {
+                                console.error('Error parsing drag data:', error);
+                              }
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.classList.add('drag-over');
+                            }}
+                            onDragLeave={(e) => {
+                              e.currentTarget.classList.remove('drag-over');
+                            }}
+                          >
+                            {selectedFlow.listOfLists.length > 0 || selectedFlow.listOfNotes.length > 0 ? (
+                              <>
+                                {/* Unified Flow Items (Collections and Notes mixed) */}
+                                {(() => {
+                                  // Create a unified array of flow items
+                                  const flowItems: Array<{type: 'collection' | 'note', id: string, title: string, note?: string, position?: number, originalIndex: number}> = [];
+                                  
+                                  // Add collections to the unified array
+                                  selectedFlow.listOfLists.forEach((collectionId, index) => {
+                                    const song = songsList.find(s => s.id === collectionId);
+                                    const sermon = sermonsList.find(s => s.id === collectionId);
+                                    const assetDeck = assetDecksList.find(a => a.id === collectionId);
+                                    
+                                    const collection = song || sermon || assetDeck;
+                                    if (collection) {
+                                      flowItems.push({
+                                        type: 'collection',
+                                        id: collectionId,
+                                        title: collection.title,
+                                        originalIndex: index
+                                      });
+                                    }
+                                  });
+                                  
+                                  // Add notes to the unified array at their specified positions
+                                  selectedFlow.listOfNotes.forEach((note, noteIndex) => {
+                                    const position = selectedFlow.listOfNotePosition[noteIndex];
+                                    flowItems.splice(position, 0, {
+                                      type: 'note',
+                                      id: `note-${noteIndex}`,
+                                      title: note,
+                                      note: note,
+                                      position: position,
+                                      originalIndex: noteIndex
+                                    });
+                                  });
+                                  
+                                  // Sort the unified array by actual position in the flow
+                                  flowItems.sort((a, b) => {
+                                    if (a.type === 'collection' && b.type === 'collection') {
+                                      return selectedFlow.listOfLists.indexOf(a.id) - selectedFlow.listOfLists.indexOf(b.id);
+                                    }
+                                    if (a.type === 'note' && b.type === 'note') {
+                                      return (a.position || 0) - (b.position || 0);
+                                    }
+                                    // Notes should be positioned relative to collections
+                                    if (a.type === 'note') {
+                                      return (a.position || 0) - selectedFlow.listOfLists.indexOf(b.id);
+                                    }
+                                    if (b.type === 'note') {
+                                      return selectedFlow.listOfLists.indexOf(a.id) - (b.position || 0);
+                                    }
+                                    return 0;
+                                  });
+                                  
+                                  return flowItems.map((item, unifiedIndex) => {
+                                    if (item.type === 'collection') {
+                                      const song = songsList.find(s => s.id === item.id);
+                                      const sermon = sermonsList.find(s => s.id === item.id);
+                                      const assetDeck = assetDecksList.find(a => a.id === item.id);
+                                      
+                                      const collection = song || sermon || assetDeck;
+                                      const icon = song ? '🎵' : sermon ? '📖' : assetDeck ? '📚' : '📄';
+                                      
+                                      return (
+                                        <div 
+                                          key={`collection-${item.originalIndex}`} 
+                                          className={`flow-item draggable-flow-item ${draggedItem?.type === 'collection' && draggedItem?.index === unifiedIndex ? 'dragging' : ''} ${selectedFlowCollection?.id === item.id ? 'selected' : ''}`}
+                                          draggable
+                                          onClick={() => {
+                                            const song = songsList.find(s => s.id === item.id);
+                                            const sermon = sermonsList.find(s => s.id === item.id);
+                                            const assetDeck = assetDecksList.find(a => a.id === item.id);
+                                            
+                                            if (song) {
+                                              handleFlowCollectionClick(item.id, 'song');
+                                            } else if (sermon) {
+                                              handleFlowCollectionClick(item.id, 'sermon');
+                                            } else if (assetDeck) {
+                                              handleFlowCollectionClick(item.id, 'asset-deck');
+                                            }
+                                          }}
+                                          onDragStart={(e) => {
+                                            setDraggedItem({ type: 'collection', index: unifiedIndex });
+                                            e.dataTransfer.setData('text/plain', JSON.stringify({
+                                              type: 'collection',
+                                              index: unifiedIndex,
+                                              collectionId: item.id,
+                                              isInternal: true
+                                            }));
+                                          }}
+                                          onDragEnd={() => {
+                                            setDraggedItem(null);
+                                          }}
+                                          onDragOver={(e) => {
+                                            e.preventDefault();
+                                            e.currentTarget.classList.add('drag-over');
+                                          }}
+                                          onDragLeave={(e) => {
+                                            e.currentTarget.classList.remove('drag-over');
+                                          }}
+                                          onDrop={(e) => {
+                                            e.preventDefault();
+                                            e.currentTarget.classList.remove('drag-over');
+                                            try {
+                                              const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                              if (data.isInternal && (data.type === 'collection' || data.type === 'note')) {
+                                                handleReorderFlowItems(data.index, unifiedIndex, data.type);
+                                              }
+                                            } catch (error) {
+                                              console.error('Error reordering flow items:', error);
+                                            }
+                                          }}
+                                        >
+                                          <span className="flow-item-content">
+                                            {icon} {collection?.title || `Collection ${item.originalIndex + 1}`}
+                                          </span>
+                                          <button 
+                                            className="delete-flow-item"
+                                            onClick={(e) => {
+                                              e.stopPropagation(); // Prevent triggering the parent click
+                                              const updatedFlow = {
+                                                ...selectedFlow,
+                                                listOfLists: selectedFlow.listOfLists.filter((_, i) => i !== item.originalIndex),
+                                                updatedAt: new Date()
+                                              };
+                                              setFlowsList(prev => prev.map(flow => 
+                                                flow.id === selectedFlow.id ? updatedFlow : flow
+                                              ));
+                                              setSelectedFlow(updatedFlow);
+                                            }}
+                                            title="Remove from flow"
+                                          >
+                                            🗑️
+                                          </button>
+                                        </div>
+                                      );
+                                    } else if (item.type === 'note') {
+                                      return (
+                                        <div 
+                                          key={`note-${item.originalIndex}`} 
+                                          className={`flow-item note-flow-item draggable-flow-item ${draggedItem?.type === 'note' && draggedItem?.index === unifiedIndex ? 'dragging' : ''}`}
+                                          draggable
+                                          onDragStart={(e) => {
+                                            setDraggedItem({ type: 'note', index: unifiedIndex });
+                                            e.dataTransfer.setData('text/plain', JSON.stringify({
+                                              type: 'note',
+                                              index: unifiedIndex,
+                                              note: item.note,
+                                              position: item.position,
+                                              isInternal: true
+                                            }));
+                                          }}
+                                          onDragEnd={() => {
+                                            setDraggedItem(null);
+                                          }}
+                                          onDragOver={(e) => {
+                                            e.preventDefault();
+                                            e.currentTarget.classList.add('drag-over');
+                                          }}
+                                          onDragLeave={(e) => {
+                                            e.currentTarget.classList.remove('drag-over');
+                                          }}
+                                          onDrop={(e) => {
+                                            e.preventDefault();
+                                            e.currentTarget.classList.remove('drag-over');
+                                            try {
+                                              const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                              if (data.isInternal && (data.type === 'collection' || data.type === 'note')) {
+                                                handleReorderFlowItems(data.index, unifiedIndex, data.type);
+                                              }
+                                            } catch (error) {
+                                              console.error('Error reordering flow items:', error);
+                                            }
+                                          }}
+                                        >
+                                          <input
+                                            type="text"
+                                            value={item.note || ''}
+                                            onChange={(e) => {
+                                              const updatedFlow = {
+                                                ...selectedFlow,
+                                                listOfNotes: selectedFlow.listOfNotes.map((n, i) => 
+                                                  i === item.originalIndex ? e.target.value : n
+                                                ),
+                                                updatedAt: new Date()
+                                              };
+                                              setFlowsList(prev => prev.map(flow => 
+                                                flow.id === selectedFlow.id ? updatedFlow : flow
+                                              ));
+                                              setSelectedFlow(updatedFlow);
+                                            }}
+                                            className="note-input"
+                                            placeholder="Type your note..."
+                                          />
+                                          <button 
+                                            className="delete-flow-item"
+                                            onClick={() => {
+                                              const updatedFlow = {
+                                                ...selectedFlow,
+                                                listOfNotes: selectedFlow.listOfNotes.filter((_, i) => i !== item.originalIndex),
+                                                listOfNotePosition: selectedFlow.listOfNotePosition.filter((_, i) => i !== item.originalIndex),
+                                                updatedAt: new Date()
+                                              };
+                                              setFlowsList(prev => prev.map(flow => 
+                                                flow.id === selectedFlow.id ? updatedFlow : flow
+                                              ));
+                                              setSelectedFlow(updatedFlow);
+                                            }}
+                                            title="Remove from flow"
+                                          >
+                                            🗑️
+                                          </button>
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  });
+                                })()}
+                              </>
+                            ) : (
+                              <div className="empty-flow">
+                                <p>Drag items here to build your flow</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="no-flow-selected">
+                      <h3>Flows Module</h3>
+                      <p>Select a flow from the sidebar or create a new one to get started.</p>
+                      <p>Flows organize sequences of Songs, Sermons, and Asset Decks with editable notes.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </main>
           
           {/* SlideThumbnailList as popout overlay for Flows */}
           <SlideThumbnailList
-            slides={slides}
+            slides={(() => {
+              if (selectedFlowCollection) {
+                const song = songsList.find(s => s.id === selectedFlowCollection.id);
+                const sermon = sermonsList.find(s => s.id === selectedFlowCollection.id);
+                const assetDeck = assetDecksList.find(a => a.id === selectedFlowCollection.id);
+                
+                const collection = song || sermon || assetDeck;
+                if (collection) {
+                  return slides.filter(slide => collection.slideIds.includes(slide.id));
+                }
+              }
+              return slides;
+            })()}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            title="Flows"
+            title={selectedFlowCollection ? (() => {
+              const song = songsList.find(s => s.id === selectedFlowCollection.id);
+              const sermon = sermonsList.find(s => s.id === selectedFlowCollection.id);
+              const assetDeck = assetDecksList.find(a => a.id === selectedFlowCollection.id);
+              
+              const collection = song || sermon || assetDeck;
+              return collection?.title || "Flows";
+            })() : "Flows"}
           />
         </>
       ) : activeModule === 'sermons' ? (
@@ -1287,6 +2028,18 @@ function App() {
         title="Create New Asset Deck"
         placeholder="Enter asset deck title..."
         itemType="asset-deck"
+      />
+
+      {/* Create Item Modal for Flows */}
+      <CreateItemModal
+        isOpen={showFlowTitleModal}
+        onClose={() => {
+          setShowFlowTitleModal(false);
+        }}
+        onSubmit={handleCreateFlow}
+        title="Create New Flow"
+        placeholder="Enter flow title..."
+        itemType="flow"
       />
 
       {/* MyMedia Library Modal */}

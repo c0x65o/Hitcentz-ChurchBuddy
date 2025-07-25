@@ -4,6 +4,7 @@ import SearchBar from '../SearchBar/SearchBar';
 import { ISong } from '../../types/ISong';
 import { ISermon } from '../../types/ISermon';
 import { IAssetDeck } from '../../types/IAssetDeck';
+import { IFlow } from '../../types/IFlow';
 
 interface SidebarProps {
   /** Current active module */
@@ -24,6 +25,8 @@ interface SidebarProps {
   customSermonsList?: ISermon[];
   /** Optional custom asset decks list to override default */
   customAssetDecksList?: IAssetDeck[];
+  /** Optional custom flows list to override default */
+  customFlowsList?: IFlow[];
   /** Optional list of items that have backgrounds set */
   itemsWithBackgrounds?: string[];
 }
@@ -38,6 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   customSongsList,
   customSermonsList,
   customAssetDecksList,
+  customFlowsList,
   itemsWithBackgrounds = []
 }) => {
   const [collapsed, setCollapsed] = useState(false);
@@ -95,7 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       case 'flows':
         return {
           title: 'Flows',
-          items: [
+          items: customFlowsList ? customFlowsList : [
             { id: 'flow-1', title: 'Sunday Service' },
             { id: 'flow-2', title: 'Wednesday Bible Study' },
             { id: 'flow-3', title: 'Youth Group' },
@@ -114,7 +118,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           placeholder: 'Search...'
         };
     }
-  }, [activeModule, customSongsList, customSermonsList, customAssetDecksList]);
+  }, [activeModule, customSongsList, customSermonsList, customAssetDecksList, customFlowsList]);
 
   const filtered = moduleData.items.filter((item) =>
     item.title.toLowerCase().includes(query.toLowerCase())
