@@ -2840,6 +2840,7 @@ function App() {
                     slide={getActiveSlide()!}
                     editMode={false}
                     onTextEdit={() => {}} // No editing in presentation mode
+                    isActive={true} // Enable video playback for active slide
                   />
                 </div>
                 <div className="connect-button-container">

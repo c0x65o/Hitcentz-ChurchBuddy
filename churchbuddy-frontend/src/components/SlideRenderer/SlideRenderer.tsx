@@ -9,9 +9,10 @@ interface SlideRendererProps {
   onTextEdit?: (element: HTMLElement, newText: string) => void;
   uniqueId?: string;
   disableScaling?: boolean;
+  isActive?: boolean; // New prop to control video playback
 }
 
-const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMode = false, onTextEdit, uniqueId, disableScaling = false }) => {
+const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMode = false, onTextEdit, uniqueId, disableScaling = false, isActive = false }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -93,6 +94,51 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
       }
     }
   }, [slide.html]);
+
+  // Video control based on isActive prop
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Handle YouTube iframes (background videos)
+    const youtubeIframes = containerRef.current.querySelectorAll('iframe[src*="youtube.com"]');
+    youtubeIframes.forEach((iframe) => {
+      const iframeElement = iframe as HTMLIFrameElement;
+      if (isActive) {
+        // When active, ensure autoplay and unmute
+        if (!iframeElement.src.includes('autoplay=1')) {
+          const separator = iframeElement.src.includes('?') ? '&' : '?';
+          iframeElement.src = `${iframeElement.src}${separator}autoplay=1&mute=0`;
+        } else if (iframeElement.src.includes('mute=1')) {
+          // Replace mute=1 with mute=0
+          iframeElement.src = iframeElement.src.replace('mute=1', 'mute=0');
+        }
+      } else {
+        // When not active, pause by removing autoplay and adding mute
+        if (iframeElement.src.includes('autoplay=1')) {
+          iframeElement.src = iframeElement.src.replace('autoplay=1', 'autoplay=0');
+        }
+        if (!iframeElement.src.includes('mute=1')) {
+          const separator = iframeElement.src.includes('?') ? '&' : '?';
+          iframeElement.src = `${iframeElement.src}${separator}mute=1`;
+        }
+      }
+    });
+
+    // Handle native video elements
+    const videoElements = containerRef.current.querySelectorAll('video');
+    videoElements.forEach((video) => {
+      if (isActive) {
+        // When active, unmute and play
+        video.muted = false;
+        video.play().catch((error) => {
+          console.log('Video play failed:', error);
+        });
+      } else {
+        // When not active, pause
+        video.pause();
+      }
+    });
+  }, [isActive, slide.html]);
 
   // Separate useEffect for edit mode
   useEffect(() => {

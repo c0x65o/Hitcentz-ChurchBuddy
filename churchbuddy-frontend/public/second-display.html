@@ -100,6 +100,30 @@
                 // Set the slide HTML content
                 slideContainer.innerHTML = slide.html;
                 slideContainer.className = 'slide-content';
+                
+                // Handle video playback for active slides
+                const youtubeIframes = slideContainer.querySelectorAll('iframe[src*="youtube.com"]');
+                youtubeIframes.forEach((iframe) => {
+                    const iframeElement = iframe;
+                    // Ensure autoplay and unmute for active slide
+                    if (!iframeElement.src.includes('autoplay=1')) {
+                        const separator = iframeElement.src.includes('?') ? '&' : '?';
+                        iframeElement.src = `${iframeElement.src}${separator}autoplay=1&mute=0`;
+                    } else if (iframeElement.src.includes('mute=1')) {
+                        // Replace mute=1 with mute=0
+                        iframeElement.src = iframeElement.src.replace('mute=1', 'mute=0');
+                    }
+                });
+
+                // Handle native video elements
+                const videoElements = slideContainer.querySelectorAll('video');
+                videoElements.forEach((video) => {
+                    // Unmute and play for active slide
+                    video.muted = false;
+                    video.play().catch((error) => {
+                        console.log('Video play failed:', error);
+                    });
+                });
             }
         });
 
