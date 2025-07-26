@@ -164,7 +164,7 @@ const MyMediaLibrary: React.FC<MyMediaLibraryProps> = ({
             ) : (
               <div className={styles.uploadPrompt}>
                 <div className={styles.uploadIcon}>📁</div>
-                <p>Drag and drop files here or click to browse</p>
+                <p>Click the buttons below to add your media</p>
                 <button 
                   className={styles.browseButton}
                   onClick={() => fileInputRef.current?.click()}

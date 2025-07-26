@@ -8,6 +8,7 @@ interface SlideThumbnailListProps {
   onReorder?: (slides: ISlide[]) => void;
   onEdit?: (slideId: string) => void;
   onDelete?: (slideId: string) => void;
+  onSlideClick?: (slide: ISlide) => void;
   title?: string;
 }
 
@@ -16,6 +17,7 @@ const SlideThumbnailList: React.FC<SlideThumbnailListProps> = ({
   onReorder,
   onEdit,
   onDelete,
+  onSlideClick,
   title = "Slides"
 }) => {
   const [collapsed, setCollapsed] = useState(false);
@@ -42,6 +44,7 @@ const SlideThumbnailList: React.FC<SlideThumbnailListProps> = ({
               slide={slide}
               onEdit={onEdit}
               onDelete={onDelete}
+              onClick={onSlideClick}
             />
           </div>
         ))}

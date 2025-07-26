@@ -1416,6 +1416,8 @@ function App() {
   const handleSlideActivation = (slide: ISlide) => {
     console.warn('🎯 HANDLE SLIDE ACTIVATION CALLED!');
     console.warn('Selected slide:', slide);
+    console.warn('Current isPreachMode:', isPreachMode);
+    console.warn('Current activeModule:', activeModule);
     
     // Remove active variable from all slides
     const updatedSlides = slides.map(s => ({
@@ -1454,6 +1456,7 @@ function App() {
     console.warn('🚨 ACTIVE SLIDE SET TO:', slide.id);
     console.warn('🚨 ACTIVE SLIDE TITLE:', slide.title);
     console.warn('🚨 ACTIVE SLIDE HTML:', slideToActivate?.html);
+    console.warn('🚨 UPDATED SLIDES COUNT:', updatedSlides.length);
   };
 
   // Function to find the currently active slide
@@ -2432,6 +2435,13 @@ function App() {
                 onPreachMode={handlePreachMode}
                 showPreachButton={true}
                 isPreachMode={isPreachMode}
+                onSlideButtonClick={isPreachMode ? (slideId: string) => {
+                  const slide = slides.find(s => s.id === slideId);
+                  if (slide) {
+                    handleSlideActivation(slide);
+                  }
+                } : undefined}
+                activeSlideId={activeSlide?.id}
               />
             </div>
           </main>
@@ -2439,6 +2449,7 @@ function App() {
           <SlideThumbnailList
             slides={slides.filter(slide => selectedSermon?.slideIds.includes(slide.id) || !selectedSermon)}
             onEdit={handleEdit}
+            onSlideClick={isPreachMode ? handleSlideActivation : undefined}
             title={selectedSermon?.title || "Sermons"}
           />
         </>

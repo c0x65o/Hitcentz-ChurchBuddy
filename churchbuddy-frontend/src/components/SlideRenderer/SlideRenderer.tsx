@@ -31,16 +31,66 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
     
     if (bgUrl) {
       console.log('SlideRenderer - applying background:', bgUrl);
-      containerRef.current.style.backgroundImage = `url(${bgUrl})`;
-      containerRef.current.style.backgroundSize = 'cover';
-      containerRef.current.style.backgroundPosition = 'center';
-      containerRef.current.style.backgroundRepeat = 'no-repeat';
+      
+      // Check if it's a video URL (YouTube embed)
+      if (bgUrl.includes('youtube.com/embed')) {
+        // Remove any existing background image
+        containerRef.current.style.backgroundImage = '';
+        containerRef.current.style.backgroundSize = '';
+        containerRef.current.style.backgroundPosition = '';
+        containerRef.current.style.backgroundRepeat = '';
+        
+        // Remove any existing background video
+        const existingVideo = containerRef.current.querySelector('iframe[src*="youtube.com"]');
+        if (existingVideo) {
+          existingVideo.remove();
+        }
+        
+        // Create and add the video iframe
+        const iframeElement = document.createElement('iframe');
+        iframeElement.src = bgUrl;
+        iframeElement.style.position = 'absolute';
+        iframeElement.style.left = '0';
+        iframeElement.style.top = '0';
+        iframeElement.style.width = '100%';
+        iframeElement.style.height = '100%';
+        iframeElement.style.border = 'none';
+        iframeElement.style.zIndex = '1';
+        iframeElement.style.objectFit = 'contain';
+        iframeElement.style.pointerEvents = 'none';
+        
+        // Ensure autoplay parameters are present for YouTube videos
+        if (bgUrl.includes('youtube.com/embed') && !bgUrl.includes('autoplay=1')) {
+          const separator = bgUrl.includes('?') ? '&' : '?';
+          iframeElement.src = `${bgUrl}${separator}autoplay=1`;
+        }
+        
+        containerRef.current.appendChild(iframeElement);
+      } else {
+        // It's an image URL
+        containerRef.current.style.backgroundImage = `url(${bgUrl})`;
+        containerRef.current.style.backgroundSize = 'cover';
+        containerRef.current.style.backgroundPosition = 'center';
+        containerRef.current.style.backgroundRepeat = 'no-repeat';
+        
+        // Remove any existing background video
+        const existingVideo = containerRef.current.querySelector('iframe[src*="youtube.com"]');
+        if (existingVideo) {
+          existingVideo.remove();
+        }
+      }
     } else {
       console.log('SlideRenderer - no background found, clearing');
       containerRef.current.style.backgroundImage = '';
       containerRef.current.style.backgroundSize = '';
       containerRef.current.style.backgroundPosition = '';
       containerRef.current.style.backgroundRepeat = '';
+      
+      // Remove any existing background video
+      const existingVideo = containerRef.current.querySelector('iframe[src*="youtube.com"]');
+      if (existingVideo) {
+        existingVideo.remove();
+      }
     }
   }, [slide.html]);
 

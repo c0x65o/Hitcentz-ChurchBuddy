@@ -14,6 +14,8 @@ interface TextEditorProps {
   onPreachMode?: () => void; // New prop for preach mode
   showPreachButton?: boolean; // New prop to show/hide Preach button
   isPreachMode?: boolean; // New prop to track preach mode state
+  onSlideButtonClick?: (slideId: string) => void; // New prop for slide button clicks
+  activeSlideId?: string; // New prop to track which slide is currently active
 }
 
 const TextEditor: React.FC<TextEditorProps> = ({ 
@@ -29,10 +31,67 @@ const TextEditor: React.FC<TextEditorProps> = ({
   onPreachMode,
   showPreachButton = false,
   isPreachMode = false,
+  onSlideButtonClick,
+  activeSlideId,
 }) => {
   const [text, setText] = useState(content);
   const [isEditing, setIsEditing] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // Effect for event delegation: handle clicks on slide buttons
+  useEffect(() => {
+    const editorElement = editorRef.current;
+    if (!editorElement) return;
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Check if the clicked element or any of its parents is a slide-button
+      const slideButton = target.closest('.slide-button') as HTMLElement;
+
+      if (slideButton && isPreachMode) {
+        e.preventDefault(); // Prevent any default contentEditable behavior
+        const slideId = slideButton.getAttribute('data-slide-id');
+        console.log('Event delegated: Slide button clicked!', slideId);
+        if (slideId && onSlideButtonClick) {
+          console.log('Calling onSlideButtonClick from event delegation for:', slideId);
+          onSlideButtonClick(slideId);
+        }
+      }
+    };
+
+    editorElement.addEventListener('click', handleClick);
+
+    return () => {
+      editorElement.removeEventListener('click', handleClick);
+    };
+  }, [onSlideButtonClick, isPreachMode]); // Re-run if these props change
+
+  // Effect to update slide button styling when activeSlideId or preach mode changes
+  useEffect(() => {
+    if (!editorRef.current) return;
+
+    const slideButtons = editorRef.current.querySelectorAll('.slide-button');
+    slideButtons.forEach(button => {
+      const slideId = button.getAttribute('data-slide-id');
+      const element = button as HTMLElement;
+
+      if (slideId === activeSlideId && isPreachMode) {
+        // Apply active styles
+        element.style.background = 'rgba(0, 123, 255, 0.2)';
+        element.style.color = '#007bff';
+        element.style.fontWeight = '600';
+        element.style.borderColor = 'rgba(0, 123, 255, 0.5)';
+        element.style.boxShadow = '0 2px 4px rgba(0, 123, 255, 0.3)';
+      } else {
+        // Apply inactive (default) styles
+        element.style.background = 'rgba(102, 126, 234, 0.1)';
+        element.style.color = '#667eea';
+        element.style.fontWeight = '500';
+        element.style.borderColor = 'rgba(102, 126, 234, 0.3)';
+        element.style.boxShadow = 'none';
+      }
+    });
+  }, [activeSlideId, isPreachMode]);
 
   // Load content from localStorage on mount
   useEffect(() => {
@@ -146,51 +205,47 @@ const TextEditor: React.FC<TextEditorProps> = ({
     button.setAttribute('data-slide-id', slideInfo.slideId);
     button.setAttribute('data-slide-title', slideInfo.slideTitle);
     button.setAttribute('data-original-text', slideInfo.originalText);
-    button.setAttribute('contenteditable', 'false');
     
     // Get current editor font size to match slide button
     const currentFontSize = editorRef.current?.style.fontSize || '16px';
     
+    // Check if this slide is currently active
+    const isActive = slideInfo.slideId === activeSlideId;
+    
     button.style.cssText = `
       display: inline-block;
-      background: rgba(102, 126, 234, 0.1);
-      color: #667eea;
+      background: ${isActive ? 'rgba(0, 123, 255, 0.2)' : 'rgba(102, 126, 234, 0.1)'};
+      color: ${isActive ? '#007bff' : '#667eea'};
       padding: 4px 8px;
       margin: 1px 2px;
       border-radius: 4px;
       font-size: ${currentFontSize};
-      font-weight: 500;
+      font-weight: ${isActive ? '600' : '500'};
       cursor: pointer;
-      border: 1px solid rgba(102, 126, 234, 0.3);
-      box-shadow: none;
+      border: 1px solid ${isActive ? 'rgba(0, 123, 255, 0.5)' : 'rgba(102, 126, 234, 0.3)'};
+      box-shadow: ${isActive ? '0 2px 4px rgba(0, 123, 255, 0.3)' : 'none'};
       user-select: none;
       transition: all 0.2s ease;
       line-height: 1.4;
       max-width: 100%;
       word-wrap: break-word;
       font-family: inherit;
+      pointer-events: all; /* Ensure button receives click events */
     `;
     // Use the original highlighted text as the button text
     button.innerHTML = slideInfo.originalText;
     
     // Add hover effect
     button.addEventListener('mouseenter', () => {
-      button.style.background = 'rgba(102, 126, 234, 0.15)';
-      button.style.borderColor = 'rgba(102, 126, 234, 0.5)';
-      button.style.boxShadow = '0 1px 3px rgba(102, 126, 234, 0.2)';
+      button.style.background = isActive ? 'rgba(0, 123, 255, 0.25)' : 'rgba(102, 126, 234, 0.15)';
+      button.style.borderColor = isActive ? 'rgba(0, 123, 255, 0.6)' : 'rgba(102, 126, 234, 0.5)';
+      button.style.boxShadow = isActive ? '0 3px 6px rgba(0, 123, 255, 0.4)' : '0 1px 3px rgba(102, 126, 234, 0.2)';
     });
     
     button.addEventListener('mouseleave', () => {
-      button.style.background = 'rgba(102, 126, 234, 0.1)';
-      button.style.borderColor = 'rgba(102, 126, 234, 0.3)';
-      button.style.boxShadow = 'none';
-    });
-    
-    // Add click handler for future presentation mode
-    button.addEventListener('click', (e) => {
-      e.preventDefault();
-      console.log('Slide button clicked:', slideInfo.slideId);
-      // TODO: In presentation mode, this will set the active slide
+      button.style.background = isActive ? 'rgba(0, 123, 255, 0.2)' : 'rgba(102, 126, 234, 0.1)';
+      button.style.borderColor = isActive ? 'rgba(0, 123, 255, 0.5)' : 'rgba(102, 126, 234, 0.3)';
+      button.style.boxShadow = isActive ? '0 2px 4px rgba(0, 123, 255, 0.3)' : 'none';
     });
     
     return button;
@@ -325,12 +380,12 @@ const TextEditor: React.FC<TextEditorProps> = ({
             <div
               ref={editorRef}
               className={`${styles.editor} ${isEditing ? styles.editing : ''}`}
-              contentEditable={!isPreachMode} // Make editable only when not in preach mode
-              onInput={handleTextChange}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
+              contentEditable={true} // Always contentEditable, control interaction via handlers
+              onInput={isPreachMode ? undefined : handleTextChange}
+              onFocus={isPreachMode ? undefined : handleFocus}
+              onBlur={isPreachMode ? undefined : handleBlur}
+              onKeyDown={isPreachMode ? undefined : handleKeyDown}
+              onPaste={isPreachMode ? undefined : handlePaste}
               suppressContentEditableWarning={true}
               data-placeholder={placeholder}
               key={storageKey} // Force re-render when storageKey changes

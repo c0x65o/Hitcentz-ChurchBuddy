@@ -7,16 +7,25 @@ interface SlideThumbnailProps {
   slide: ISlide;
   onEdit?: (slideId: string) => void;
   onDelete?: (slideId: string) => void;
+  onClick?: (slide: ISlide) => void;
 }
 
 const SlideThumbnail: React.FC<SlideThumbnailProps> = ({ 
   slide, 
   onEdit, 
-  onDelete 
+  onDelete,
+  onClick
 }) => {
+  // Check if this slide is active
+  const isActive = slide.html.includes('data-active="true"') || slide.html.includes('class="active"');
+  
   return (
-    <div className={styles.thumbnailContainer}>
-      <div className={styles.slideWrapper}>
+    <div className={`${styles.thumbnailContainer} ${isActive ? styles.activeSlide : ''}`}>
+      <div 
+        className={styles.slideWrapper}
+        onClick={() => onClick?.(slide)}
+        style={{ cursor: onClick ? 'pointer' : 'default' }}
+      >
         <SlideRenderer slide={slide} className={styles.slideRenderer} />
       </div>
       
