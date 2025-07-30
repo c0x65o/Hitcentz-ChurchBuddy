@@ -5,7 +5,6 @@ import SlideThumbnailList from './components/SlideThumbnailList/SlideThumbnailLi
 import SlideThumbnail from './components/SlideThumbnail/SlideThumbnail';
 import SlideGrid from './components/SlideGrid/SlideGrid';
 import Sidebar from './components/Sidebar/Sidebar';
-import SlideEditorModal from './components/SlideEditorModal/SlideEditorModal';
 import TextEditor from './components/TextEditor/TextEditor';
 import MyMediaLibrary from './components/MyMediaLibrary/MyMediaLibrary';
 import CreateItemModal from './components/CreateItemModal/CreateItemModal';
@@ -23,8 +22,7 @@ function App() {
   console.log('🚀 App component rendering...');
   
   const [activeModule, setActiveModule] = useState<'presentation' | 'songs' | 'sermons' | 'asset-decks' | 'flows'>('songs');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingSlide, setEditingSlide] = useState<ISlide | null>(null);
+
   const [songsContent, setSongsContent] = useState('');
   const [sermonsContent, setSermonsContent] = useState('');
   const [showSongTitleModal, setShowSongTitleModal] = useState(false);
@@ -132,15 +130,7 @@ function App() {
     }
   ]);
 
-  const handleEdit = (slideId: string) => {
-    console.log('Edit slide:', slideId);
-    // Find the slide to edit
-    const slideToEdit = slides.find(slide => slide.id === slideId);
-    if (slideToEdit) {
-      setEditingSlide(slideToEdit);
-      setModalOpen(true);
-    }
-  };
+
 
   const handleDelete = (slideId: string) => {
     console.log('Delete slide:', slideId);
@@ -1372,30 +1362,7 @@ function App() {
     setBackgroundTargetItem(null);
   };
 
-  const handleSaveSlide = (updatedSlide: ISlide, shouldCloseModal = true) => {
-    console.log('Saving slide:', updatedSlide, 'shouldCloseModal:', shouldCloseModal);
-    
-    // Update the slides array
-    setSlides(prevSlides => 
-      prevSlides.map(slide => 
-        slide.id === updatedSlide.id ? updatedSlide : slide
-      )
-    );
-    
-    // Update currentSlide if it's the one being edited
-    if (currentSlide.id === updatedSlide.id) {
-      // Note: currentSlide is read-only in this demo, but in a real app you'd update it too
-    }
-    
-    // Only close modal if explicitly requested (not for auto-saves)
-    if (shouldCloseModal) {
-      console.log('Closing modal after save');
-      setModalOpen(false);
-      setEditingSlide(null);
-    } else {
-      console.log('Auto-save completed, keeping modal open');
-    }
-  };
+
 
   // Presentation tab state
   const [selectedPresentationFlow, setSelectedPresentationFlow] = useState<IFlow | null>(null);
@@ -1900,39 +1867,27 @@ function App() {
                 </div>
               </div>
               
-              {/* Slide Editor or Welcome Message */}
-              {editingSlide ? (
-              <SlideEditorModal 
-                  key={editingSlide.id} // Force re-render when slide changes
-                  slide={editingSlide}
-                isOpen={true}
-                onClose={() => {}} // No-op since it's not a modal
-                onSave={handleSaveSlide}
-                isEmbedded={true}
-              />
-              ) : (
-                <div className="asset-decks-welcome">
-                  <div className="welcome-content">
-                    <h2>Welcome to Asset Decks</h2>
-                    <p>Select an asset deck from the sidebar to start creating slides, or click "New Asset" to create a new slide.</p>
-                    <div className="welcome-actions">
-                      <button 
-                        className="welcome-button"
-                        onClick={handleNewAsset}
-                      >
-                        🆕 Create New Asset
-                      </button>
-                    </div>
+              {/* Asset Decks: Welcome Message */}
+              <div className="asset-decks-welcome">
+                <div className="welcome-content">
+                  <h2>Welcome to Asset Decks</h2>
+                  <p>Select an asset deck from the sidebar to start creating slides, or click "New Asset" to create a new slide.</p>
+                  <div className="welcome-actions">
+                    <button 
+                      className="welcome-button"
+                      onClick={handleNewAsset}
+                    >
+                      🆕 Create New Asset
+                    </button>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </main>
           
           {/* SlideThumbnailList as popout overlay */}
           <SlideThumbnailList
             slides={slides.filter(slide => selectedAssetDeck?.slideIds.includes(slide.id) || !selectedAssetDeck)}
-            onEdit={handleEdit}
             onDelete={handleDelete}
             title={selectedAssetDeck?.title || "Asset Deck Slides"}
           />
@@ -1965,7 +1920,6 @@ function App() {
           {/* SlideThumbnailList as popout overlay for Songs */}
           <SlideThumbnailList
             slides={slides.filter(slide => selectedSong?.slideIds.includes(slide.id) || !selectedSong)}
-            onEdit={handleEdit}
             title={selectedSong?.title || "Songs"}
           />
         </>
@@ -2489,16 +2443,7 @@ function App() {
         </>
       )}
 
-      {/* Test Modal */}
-      <SlideEditorModal 
-        slide={editingSlide || currentSlide}
-        isOpen={modalOpen}
-        onClose={() => {
-          setModalOpen(false);
-          setEditingSlide(null);
-        }}
-        onSave={handleSaveSlide}
-      />
+
 
       {/* Create Item Modal */}
       <CreateItemModal
@@ -2850,8 +2795,6 @@ function App() {
                 <div className="active-slide-content">
                   <SlideRenderer
                     slide={getActiveSlide()!}
-                    editMode={false}
-                    onTextEdit={() => {}} // No editing in presentation mode
                     isActive={true} // Enable video playback for active slide
                   />
                 </div>

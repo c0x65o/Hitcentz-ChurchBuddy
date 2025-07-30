@@ -39,8 +39,6 @@ const SlideGrid: React.FC<SlideGridProps> = ({
             <div className={styles.slideRenderer}>
               <SlideRenderer
                 slide={slide}
-                editMode={false}
-                onTextEdit={() => {}}
                 disableScaling={true}
                 isActive={false}
               />
