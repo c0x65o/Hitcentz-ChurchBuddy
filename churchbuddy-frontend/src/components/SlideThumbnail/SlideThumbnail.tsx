@@ -26,7 +26,7 @@ const SlideThumbnail: React.FC<SlideThumbnailProps> = ({
         onClick={() => onClick?.(slide)}
         style={{ cursor: onClick ? 'pointer' : 'default' }}
       >
-        <SlideRenderer slide={slide} className={styles.slideRenderer} />
+        <SlideRenderer slide={slide} className={styles.slideRenderer} isActive={false} />
       </div>
       
       {(onEdit || onDelete) && (

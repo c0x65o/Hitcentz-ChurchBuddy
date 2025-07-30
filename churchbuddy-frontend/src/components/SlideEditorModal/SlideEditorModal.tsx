@@ -20,7 +20,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
   isEmbedded = false
 }) => {
   const [currentSlideHtml, setCurrentSlideHtml] = React.useState(slide.html);
-  const [saveAttempts, setSaveAttempts] = React.useState(0);
+  // const [saveAttempts, setSaveAttempts] = React.useState(0); // COMMENTED OUT - UNUSED
   const [isMediaLibraryOpen, setIsMediaLibraryOpen] = React.useState(false);
   const [isSelectingBackground, setIsSelectingBackground] = React.useState(false);
   const [hasBackground, setHasBackground] = React.useState(false);
@@ -71,26 +71,30 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
       if (e.key === 'Delete' || e.key === 'Backspace') {
         const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
         if (selectedElement) {
-          // Prevent default browser behavior
-          e.preventDefault();
-          
-          console.log('Deleting selected element:', selectedElement.tagName);
-          
-          // Remove the element from DOM
-          if (selectedElement.parentNode) {
-            selectedElement.parentNode.removeChild(selectedElement);
-          }
-          
-          // Clean up any handles associated with this element
-          const existingHandles = document.querySelectorAll('[data-handle-name], [data-handle-type], [data-element-id]');
-          existingHandles.forEach(handle => {
-            if (handle.parentNode) {
-              handle.parentNode.removeChild(handle);
+          // Only delete the element if it's not in edit mode (not contentEditable)
+          if (selectedElement.contentEditable !== 'true') {
+            // Prevent default browser behavior
+            e.preventDefault();
+            
+            console.log('Deleting selected element:', selectedElement.tagName);
+            
+            // Remove the element from DOM
+            if (selectedElement.parentNode) {
+              selectedElement.parentNode.removeChild(selectedElement);
             }
-          });
-          
-          // Save the updated state
-          saveElementState();
+            
+            // Clean up any handles associated with this element
+            const existingHandles = document.querySelectorAll('[data-handle-name], [data-handle-type], [data-element-id]');
+            existingHandles.forEach(handle => {
+              if (handle.parentNode) {
+                handle.parentNode.removeChild(handle);
+              }
+            });
+            
+            // Save the updated state
+            saveElementState();
+          }
+          // If contentEditable is 'true', let the browser handle normal text editing
         }
       }
     };
@@ -271,64 +275,16 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     }
   };
 
-  const handleAddYouTubeVideo = () => {
-    const videoUrl = prompt('Enter YouTube video URL:');
-    if (videoUrl) {
-      const videoId = extractYouTubeId(videoUrl);
-      if (videoId) {
-        // Create the iframe element for the video
-        const iframeElement = document.createElement('iframe');
-        iframeElement.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-        iframeElement.style.position = 'absolute';
-        iframeElement.style.left = '0';
-        iframeElement.style.top = '0';
-        iframeElement.style.width = '100%';
-        iframeElement.style.height = '100%';
-        iframeElement.style.border = 'none';
-        iframeElement.style.zIndex = '1'; // Lower z-index to be behind other content
-        iframeElement.style.objectFit = 'contain';
-        iframeElement.style.pointerEvents = 'none'; // Prevent interaction with video
-        
-        // Set the video as background by adding it to the slide container
-        const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
-        const slideContainer = slideContent?.parentElement as HTMLElement | null;
-        
-        if (slideContainer) {
-          // Remove any existing background video
-          const existingVideo = slideContainer.querySelector('iframe[src*="youtube.com"]');
-          if (existingVideo) {
-            existingVideo.remove();
-          }
-          
-          // Add the new video as background
-          slideContainer.appendChild(iframeElement);
-          
-          // Update HTML state with background comment
-          const videoEmbedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-          let newHtml = currentSlideHtml.replace(/<!--BACKGROUND:.*?-->/i, ''); // Remove existing background
-          newHtml = `<!--BACKGROUND:${videoEmbedUrl}-->` + newHtml; // Add new background comment
-          setCurrentSlideHtml(newHtml);
-          
-          // Save the slide
-          onSave({ ...slide, html: newHtml, updatedAt: new Date() }, false);
-          setHasBackground(true);
-        }
-      } else {
-        alert('Invalid YouTube URL');
-      }
-    }
-  };
-
-  const handleRotateImage = () => {
-    const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
-    if (selectedElement && selectedElement.tagName === 'IMG') {
-      const imgElement = selectedElement as HTMLImageElement;
-      const currentRotation = getCurrentRotation(selectedElement);
-      const newRotation = currentRotation + 90;
-      selectedElement.style.transform = `translate(-50%, -50%) rotate(${newRotation}deg)`;
-      handleTextEdit(selectedElement, imgElement.alt || '');
-    }
-  };
+  // const handleRotateImage = () => {
+  //   const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
+  //   if (selectedElement && selectedElement.tagName === 'IMG') {
+  //     const imgElement = selectedElement as HTMLImageElement;
+  //     const currentRotation = getCurrentRotation(selectedElement);
+  //     const newRotation = currentRotation + 90;
+  //     selectedElement.style.transform = `translate(-50%, -50%) rotate(${newRotation}deg)`;
+  //     handleTextEdit(selectedElement, imgElement.alt || '');
+  //   }
+  // };
 
   // Helper functions
   const extractYouTubeId = (url: string): string | null => {
@@ -337,11 +293,11 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  const getCurrentRotation = (element: HTMLElement): number => {
-    const transform = element.style.transform;
-    const match = transform.match(/rotate\((\d+)deg\)/);
-    return match ? parseInt(match[1]) : 0;
-  };
+  // const getCurrentRotation = (element: HTMLElement): number => {
+  //   const transform = element.style.transform;
+  //   const match = transform.match(/rotate\((\d+)deg\)/);
+  //   return match ? parseInt(match[1]) : 0;
+  // };
 
   // Background handlers
   const applyBackgroundStyle = (backgroundUrl: string | null) => {
@@ -351,65 +307,17 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     if (!slideContainer) return;
     
     if (backgroundUrl) {
-      // Check if it's a video URL (YouTube embed)
-      if (backgroundUrl.includes('youtube.com/embed')) {
-        // Remove any existing background image
-        slideContainer.style.backgroundImage = '';
-        slideContainer.style.backgroundSize = '';
-        slideContainer.style.backgroundPosition = '';
-        slideContainer.style.backgroundRepeat = '';
-        
-        // Remove any existing background video
-        const existingVideo = slideContainer.querySelector('iframe[src*="youtube.com"]');
-        if (existingVideo) {
-          existingVideo.remove();
-        }
-        
-        // Create and add the video iframe
-        const iframeElement = document.createElement('iframe');
-        iframeElement.src = backgroundUrl;
-        iframeElement.style.position = 'absolute';
-        iframeElement.style.left = '0';
-        iframeElement.style.top = '0';
-        iframeElement.style.width = '100%';
-        iframeElement.style.height = '100%';
-        iframeElement.style.border = 'none';
-        iframeElement.style.zIndex = '1';
-        iframeElement.style.objectFit = 'contain';
-        iframeElement.style.pointerEvents = 'none';
-        
-        // Ensure autoplay parameters are present for YouTube videos
-        if (backgroundUrl.includes('youtube.com/embed') && !backgroundUrl.includes('autoplay=1')) {
-          const separator = backgroundUrl.includes('?') ? '&' : '?';
-          iframeElement.src = `${backgroundUrl}${separator}autoplay=1`;
-        }
-        
-        slideContainer.appendChild(iframeElement);
-      } else {
-        // It's an image URL
-        slideContainer.style.backgroundImage = `url(${backgroundUrl})`;
-        slideContainer.style.backgroundSize = 'contain';
-        slideContainer.style.backgroundPosition = 'center';
-        slideContainer.style.backgroundRepeat = 'no-repeat';
-        
-        // Remove any existing background video
-        const existingVideo = slideContainer.querySelector('iframe[src*="youtube.com"]');
-        if (existingVideo) {
-          existingVideo.remove();
-        }
-      }
+      // Only handle image backgrounds now
+      slideContainer.style.backgroundImage = `url(${backgroundUrl})`;
+      slideContainer.style.backgroundSize = 'contain';
+      slideContainer.style.backgroundPosition = 'center';
+      slideContainer.style.backgroundRepeat = 'no-repeat';
     } else {
       // Remove all backgrounds
       slideContainer.style.backgroundImage = '';
       slideContainer.style.backgroundSize = '';
       slideContainer.style.backgroundPosition = '';
       slideContainer.style.backgroundRepeat = '';
-      
-      // Remove any existing background video
-      const existingVideo = slideContainer.querySelector('iframe[src*="youtube.com"]');
-      if (existingVideo) {
-        existingVideo.remove();
-      }
     }
   };
 
@@ -529,7 +437,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
       const style = (element as HTMLElement).style;
       const hasHandleCharacteristics = (
         (style.width === '12px' && style.height === '12px') || // Corner handles
-        (style.width === '36px' && style.height === '36px') || // Drag/rotate handles
+        // (style.width === '36px' && style.height === '36px') || // Drag/rotate handles - COMMENTED OUT
         (style.width === '8px') || // Edge handles
         (style.height === '8px') ||
         style.cursor?.includes('resize') ||
@@ -633,40 +541,33 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
   if (!isOpen) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    // Backdrop click disabled - only close button can close modal
-    console.log('Backdrop clicked - ignoring (backdrop close disabled)');
+    // Only ignore if clicking on the backdrop itself, not on content
+    if (e.target === e.currentTarget) {
+      console.log('Backdrop clicked - ignoring (backdrop close disabled)');
+    }
   };
 
 
 
   const handleTextEdit = (element: HTMLElement, newText: string) => {
     console.log('=== TEXT EDIT START ===');
+    console.log('New text:', newText);
 
     try {
-      // After user edits, rebuild entire slide HTML from DOM to ensure consistency
+      // Update the element's text content
+      element.textContent = newText;
+      
+      // Get the updated HTML from the DOM
       const slideContentEl = document.querySelector('[data-slide-id="modal-editor"]');
       if (!slideContentEl) {
         console.error('Slide content element not found for saving!');
         return;
       }
 
-      // Clone to avoid modifying live DOM while cleaning
-      const cloned = slideContentEl.cloneNode(true) as HTMLElement;
-
-      // Remove any handle elements that might still be present in the cloned DOM
-      cloned.querySelectorAll('[data-handle-name], [data-handle-type], [data-element-id]').forEach(h => h.remove());
-
-      // Serialize cleaned HTML
-      const cleanHtml = cloned.innerHTML;
-
-      if (cleanHtml === currentSlideHtml) {
-        console.log('HTML unchanged after edit – skipping save');
-        return;
-      }
-
+      const cleanHtml = slideContentEl.innerHTML;
       setCurrentSlideHtml(cleanHtml);
 
-      // Persist via onSave
+      // Save the updated slide
       const updatedSlide: ISlide = {
         ...slide,
         html: cleanHtml,
@@ -677,6 +578,57 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
 
     } catch (err) {
       console.error('Error during text edit save', err);
+    }
+  };
+
+  const handleAddVideoSlide = () => {
+    const videoUrl = prompt('⚠️ WARNING: This will replace your current slide and text cannot be added to it.\n\nEnter YouTube video URL:');
+    if (videoUrl) {
+      const videoId = extractYouTubeId(videoUrl);
+      if (videoId) {
+        console.log('=== REPLACING CURRENT SLIDE WITH VIDEO ===');
+        console.log('Video ID:', videoId);
+        
+        // Create video slide HTML with iframe that scales to fit - simpler structure
+        const videoSlideHtml = `
+          <div style="position: relative; width: 100%; height: 100%;">
+            <iframe 
+              src="https://www.youtube.com/embed/${videoId}?autoplay=0&mute=1" 
+              style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 1920px; height: 1080px; border: none; z-index: 1; pointer-events: none;"
+              frameborder="0"
+              allowfullscreen>
+            </iframe>
+          </div>
+        `;
+        
+        console.log('Generated video HTML:', videoSlideHtml);
+        
+        // Replace the current slide with video HTML
+        setCurrentSlideHtml(videoSlideHtml);
+        
+        // Save the updated slide
+        const updatedSlide: ISlide = {
+          ...slide,
+          html: videoSlideHtml,
+          updatedAt: new Date()
+        };
+        
+        console.log('=== VIDEO SLIDE CREATED ===');
+        console.log('Slide ID:', updatedSlide.id);
+        console.log('Slide Title:', updatedSlide.title);
+        console.log('Video HTML:', videoSlideHtml);
+        
+        onSave(updatedSlide, false);
+        console.log('Current slide replaced with video');
+        
+        // Force a re-render by updating the state again
+        setTimeout(() => {
+          console.log('Forcing re-render of video slide');
+          setCurrentSlideHtml(videoSlideHtml);
+        }, 100);
+      } else {
+        alert('Invalid YouTube URL');
+      }
     }
   };
 
@@ -768,10 +720,10 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
             </button>
             <button 
               className={styles.toolButton} 
-              title="Add YouTube Video"
-              onClick={handleAddYouTubeVideo}
+              title="Add Video Slide"
+              onClick={handleAddVideoSlide}
             >
-              Add Video
+              Video Slide
             </button>
             <button 
               className={styles.toolButton} 
@@ -836,6 +788,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
                 editMode={true}
                 onTextEdit={handleTextEdit}
                 uniqueId="modal-editor"
+                isActive={false}
               />
             </div>
           </div>

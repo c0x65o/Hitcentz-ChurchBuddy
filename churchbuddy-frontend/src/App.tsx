@@ -1416,6 +1416,10 @@ function App() {
   const handleSlideActivation = (slide: ISlide) => {
     console.warn('🎯 HANDLE SLIDE ACTIVATION CALLED!');
     console.warn('Selected slide:', slide);
+    console.warn('Selected slide ID:', slide.id);
+    console.warn('Selected slide title:', slide.title);
+    console.warn('Selected slide HTML length:', slide.html.length);
+    console.warn('Selected slide HTML preview:', slide.html.substring(0, 200));
     console.warn('Current isPreachMode:', isPreachMode);
     console.warn('Current activeModule:', activeModule);
     
@@ -1430,6 +1434,9 @@ function App() {
     // Add active variable to the selected slide
     const slideToActivate = updatedSlides.find(s => s.id === slide.id);
     if (slideToActivate) {
+      console.warn('Found slide to activate:', slideToActivate.id);
+      console.warn('Original HTML:', slideToActivate.html);
+      
       // Preserve any background comments and only add active attributes to the main container
       const backgroundMatch = slideToActivate.html.match(/<!--BACKGROUND:.*?-->/);
       const backgroundComment = backgroundMatch ? backgroundMatch[0] : '';
@@ -1437,6 +1444,7 @@ function App() {
       
       // Add active attributes to the first div or main container
       const updatedHtml = htmlWithoutBackground.replace(/<div([^>]*)>/i, (match, attributes) => {
+        console.warn('Replacing div with attributes:', attributes);
         if (attributes.includes('class=')) {
           return `<div${attributes} data-active="true">`;
         } else {
@@ -1446,6 +1454,10 @@ function App() {
       
       // Restore background comment if it existed
       slideToActivate.html = backgroundComment + updatedHtml;
+      console.warn('Updated HTML:', slideToActivate.html);
+    } else {
+      console.warn('❌ SLIDE NOT FOUND IN UPDATED SLIDES ARRAY!');
+      console.warn('Available slide IDs:', updatedSlides.map(s => s.id));
     }
     
     // Update slides state

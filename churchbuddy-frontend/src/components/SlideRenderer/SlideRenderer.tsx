@@ -32,66 +32,16 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
     
     if (bgUrl) {
       console.log('SlideRenderer - applying background:', bgUrl);
-      
-      // Check if it's a video URL (YouTube embed)
-      if (bgUrl.includes('youtube.com/embed')) {
-        // Remove any existing background image
-        containerRef.current.style.backgroundImage = '';
-        containerRef.current.style.backgroundSize = '';
-        containerRef.current.style.backgroundPosition = '';
-        containerRef.current.style.backgroundRepeat = '';
-        
-        // Remove any existing background video
-        const existingVideo = containerRef.current.querySelector('iframe[src*="youtube.com"]');
-        if (existingVideo) {
-          existingVideo.remove();
-        }
-        
-        // Create and add the video iframe
-        const iframeElement = document.createElement('iframe');
-        iframeElement.src = bgUrl;
-        iframeElement.style.position = 'absolute';
-        iframeElement.style.left = '0';
-        iframeElement.style.top = '0';
-        iframeElement.style.width = '100%';
-        iframeElement.style.height = '100%';
-        iframeElement.style.border = 'none';
-        iframeElement.style.zIndex = '1';
-        iframeElement.style.objectFit = 'contain';
-        iframeElement.style.pointerEvents = 'none';
-        
-        // Ensure autoplay parameters are present for YouTube videos
-        if (bgUrl.includes('youtube.com/embed') && !bgUrl.includes('autoplay=1')) {
-          const separator = bgUrl.includes('?') ? '&' : '?';
-          iframeElement.src = `${bgUrl}${separator}autoplay=1`;
-        }
-        
-        containerRef.current.appendChild(iframeElement);
-      } else {
-        // It's an image URL
-        containerRef.current.style.backgroundImage = `url(${bgUrl})`;
-        containerRef.current.style.backgroundSize = 'cover';
-        containerRef.current.style.backgroundPosition = 'center';
-        containerRef.current.style.backgroundRepeat = 'no-repeat';
-        
-        // Remove any existing background video
-        const existingVideo = containerRef.current.querySelector('iframe[src*="youtube.com"]');
-        if (existingVideo) {
-          existingVideo.remove();
-        }
-      }
+      containerRef.current.style.backgroundImage = `url(${bgUrl})`;
+      containerRef.current.style.backgroundSize = 'cover';
+      containerRef.current.style.backgroundPosition = 'center';
+      containerRef.current.style.backgroundRepeat = 'no-repeat';
     } else {
       console.log('SlideRenderer - no background found, clearing');
       containerRef.current.style.backgroundImage = '';
       containerRef.current.style.backgroundSize = '';
       containerRef.current.style.backgroundPosition = '';
       containerRef.current.style.backgroundRepeat = '';
-      
-      // Remove any existing background video
-      const existingVideo = containerRef.current.querySelector('iframe[src*="youtube.com"]');
-      if (existingVideo) {
-        existingVideo.remove();
-      }
     }
   }, [slide.html]);
 
@@ -99,24 +49,40 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
   useEffect(() => {
     if (!containerRef.current) return;
 
+    console.log('Video control useEffect - isActive:', isActive, 'slide.html length:', slide.html.length);
+
     // Handle YouTube iframes (background videos)
     const youtubeIframes = containerRef.current.querySelectorAll('iframe[src*="youtube.com"]');
-    youtubeIframes.forEach((iframe) => {
+    console.log('Found YouTube iframes:', youtubeIframes.length);
+    
+    youtubeIframes.forEach((iframe, index) => {
       const iframeElement = iframe as HTMLIFrameElement;
+      console.log(`Iframe ${index} src:`, iframeElement.src);
+      
       if (isActive) {
         // When active, ensure autoplay and unmute
-        if (!iframeElement.src.includes('autoplay=1')) {
+        if (iframeElement.src.includes('autoplay=0')) {
+          iframeElement.src = iframeElement.src.replace('autoplay=0', 'autoplay=1');
+        } else if (!iframeElement.src.includes('autoplay=1')) {
           const separator = iframeElement.src.includes('?') ? '&' : '?';
-          iframeElement.src = `${iframeElement.src}${separator}autoplay=1&mute=0`;
-        } else if (iframeElement.src.includes('mute=1')) {
-          // Replace mute=1 with mute=0
+          iframeElement.src = `${iframeElement.src}${separator}autoplay=1`;
+        }
+        
+        if (iframeElement.src.includes('mute=1')) {
           iframeElement.src = iframeElement.src.replace('mute=1', 'mute=0');
+        } else if (!iframeElement.src.includes('mute=0')) {
+          const separator = iframeElement.src.includes('?') ? '&' : '?';
+          iframeElement.src = `${iframeElement.src}${separator}mute=0`;
         }
       } else {
         // When not active, pause by removing autoplay and adding mute
         if (iframeElement.src.includes('autoplay=1')) {
           iframeElement.src = iframeElement.src.replace('autoplay=1', 'autoplay=0');
+        } else if (!iframeElement.src.includes('autoplay=0')) {
+          const separator = iframeElement.src.includes('?') ? '&' : '?';
+          iframeElement.src = `${iframeElement.src}${separator}autoplay=0`;
         }
+        
         if (!iframeElement.src.includes('mute=1')) {
           const separator = iframeElement.src.includes('?') ? '&' : '?';
           iframeElement.src = `${iframeElement.src}${separator}mute=1`;
@@ -154,9 +120,9 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
       allElements.forEach((htmlElement) => {
         if (!(htmlElement instanceof HTMLElement)) return;
 
-        // Skip if already processed
-        if (htmlElement.dataset.processed === 'true') return;
-        htmlElement.dataset.processed = 'true';
+        // Always process elements to ensure event listeners are attached
+        // Remove any existing processed flag to allow re-processing
+        delete htmlElement.dataset.processed;
 
         // Create handles for this element
         const allHandles: HTMLElement[] = [];
@@ -247,6 +213,8 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           console.log(`Created edge handle: ${pos.name}`);
         });
         
+        // DRAG HANDLE COMMENTED OUT - STARTING FRESH
+        /*
         // Create drag handle (bottom center with icon) - clean rectangular design
         const dragHandle = document.createElement('div');
         dragHandle.style.position = 'absolute';
@@ -292,6 +260,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         } else {
           htmlElement.appendChild(dragHandle);
         }
+        */
         
         // Create rotate button (next to drag handle) - clean rectangular design
         const rotateButton = document.createElement('div');
@@ -401,6 +370,8 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             }
           });
           
+          // DRAG HANDLE POSITIONING COMMENTED OUT - STARTING FRESH
+          /*
           // Position drag handle directly below element, left side
           let dragX = elementLeft;
           let dragY = elementTop + elementHeight + 10;
@@ -420,10 +391,11 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           dragHandle.style.top = `${dragY}px`;
           dragHandle.style.bottom = 'auto';
           dragHandle.style.transform = 'none';
+          */
           
           // Position rotate button directly below element, right side
           let rotateX = elementLeft + elementWidth - 120; // Increased from 90px to 120px for more spacing
-          let rotateY = dragY;
+          let rotateY = elementTop + elementHeight + 10; // Use element position instead of dragY
           
           // Ensure rotate button doesn't go off right edge
           if (rotateX > containerRect.width - 20) {
@@ -443,6 +415,8 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         adjustHandlePositions();
         
         // Set up interaction handlers
+        // DRAG VARIABLES COMMENTED OUT - STARTING FRESH
+        /*
         let isDragging = false;
         let isResizing = false;
         let currentHandle: HTMLElement | null = null;
@@ -453,7 +427,10 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         let originalWidth = 0;
         let originalHeight = 0;
         let originalTransform = '';
+        */
         
+        // DRAG INTERACTION HANDLERS COMMENTED OUT - STARTING FRESH
+        /*
         const handleInteractionStart = (e: MouseEvent) => {
           e.preventDefault();
           e.stopPropagation();
@@ -467,11 +444,24 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           if (handleType === 'drag') {
             isDragging = true;
             currentHandle = target;
-            const rect = htmlElement.getBoundingClientRect();
+            
+            // Get container bounds for coordinate conversion
+            const containerRect = containerRef.current?.getBoundingClientRect();
+            if (!containerRect) return;
+            
+            // Get element position relative to container
+            const elementRect = htmlElement.getBoundingClientRect();
+            const elementLeft = elementRect.left - containerRect.left;
+            const elementTop = elementRect.top - containerRect.top;
+            
+            // Convert to percentages for positioning
+            const containerWidth = containerRect.width;
+            const containerHeight = containerRect.height;
+            originalX = (elementLeft / containerWidth) * 100;
+            originalY = (elementTop / containerHeight) * 100;
+            
             dragStartX = e.clientX;
             dragStartY = e.clientY;
-            originalX = rect.left;
-            originalY = rect.top;
             originalTransform = htmlElement.style.transform || '';
             
             document.addEventListener('mousemove', handleInteractionMove);
@@ -498,6 +488,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             adjustHandlePositions();
           }
         };
+        */
         
         const getCurrentRotation = (element: HTMLElement): number => {
           const transform = element.style.transform || '';
@@ -512,23 +503,36 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           adjustHandlePositions();
         };
         
+        // DRAG MOVE HANDLER COMMENTED OUT - STARTING FRESH
+        /*
         const handleInteractionMove = (e: MouseEvent) => {
           if (!isDragging && !isResizing) return;
           
           e.preventDefault();
           
+          // Calculate deltas for both drag and resize operations
           const deltaX = e.clientX - dragStartX;
           const deltaY = e.clientY - dragStartY;
           
           if (isDragging) {
-            // Calculate new position
-            const newX = originalX + deltaX;
-            const newY = originalY + deltaY;
+            // Get container bounds for coordinate conversion
+            const containerRect = containerRef.current?.getBoundingClientRect();
+            if (!containerRect) return;
             
-            // Apply new position
+            // Calculate new position using percentage-based coordinates
+            // Convert delta to percentage
+            const containerWidth = containerRect.width;
+            const containerHeight = containerRect.height;
+            const deltaXPercent = (deltaX / containerWidth) * 100;
+            const deltaYPercent = (deltaY / containerHeight) * 100;
+            
+            const newX = originalX + deltaXPercent;
+            const newY = originalY + deltaYPercent;
+            
+            // Apply new position using percentages and preserve transform
             htmlElement.style.position = 'absolute';
-            htmlElement.style.left = `${newX}px`;
-            htmlElement.style.top = `${newY}px`;
+            htmlElement.style.left = `${newX}%`;
+            htmlElement.style.top = `${newY}%`;
             htmlElement.style.transform = originalTransform;
             
             // Update handle positions
@@ -579,7 +583,10 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             adjustHandlePositions();
           }
         };
+        */
         
+        // DRAG END HANDLER COMMENTED OUT - STARTING FRESH
+        /*
         const handleInteractionEnd = () => {
           isDragging = false;
           isResizing = false;
@@ -588,63 +595,38 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           document.removeEventListener('mousemove', handleInteractionMove);
           document.removeEventListener('mouseup', handleInteractionEnd);
         };
+        */
         
-        // Add click handler for editing
+        // Simple click handler for editing
         const handleTextClick = (e: Event) => {
           e.stopPropagation();
+          e.preventDefault();
+          console.log('Click detected on element:', htmlElement.tagName, 'contentEditable:', htmlElement.contentEditable);
           
-          // Remove selection from all other elements
-          const allElements = contentRef.current!.querySelectorAll('h1, h2, h3, p, div, img, iframe');
-          allElements.forEach((el) => {
-            if (el !== htmlElement) {
-              (el as HTMLElement).classList.remove('selected');
-              (el as HTMLElement).blur();
-              (el as HTMLElement).contentEditable = 'false';
-            }
-          });
-          
-          // Add selection to this element
-          htmlElement.classList.add('selected');
-          
-          const wasAlreadyEditable = htmlElement.contentEditable === 'true';
-          
-          // Add editing outline
-          htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.5)';
-          
-          // Make contentEditable for text elements
+          // Make text elements editable on click
           if (htmlElement.tagName.match(/^H[1-6]$|^P$|^DIV$/)) {
             htmlElement.contentEditable = 'true';
-            
-            if (!wasAlreadyEditable) {
-              // Only select all text on first click to enter edit mode
-              htmlElement.focus();
-              const range = document.createRange();
-              range.selectNodeContents(htmlElement);
-              const selection = window.getSelection();
-              selection?.removeAllRanges();
-              selection?.addRange(range);
-              console.log('Entering edit mode - selected all text');
-            } else {
-              // If already editable, just focus but don't change selection
-              console.log('Already in edit mode - preserving cursor position');
-            }
+            htmlElement.focus();
+            console.log('Made element editable:', htmlElement.tagName);
           }
         };
         
-        // Add blur handler to save changes
+        // Also handle mousedown to ensure click is captured
+        const handleMouseDown = (e: Event) => {
+          e.stopPropagation();
+          console.log('MouseDown detected on element:', htmlElement.tagName);
+        };
+        
+                // Simple blur handler to save changes
         const handleBlur = () => {
-          console.log('Text blur - saving changes');
+          console.log('Text blur - saving changes for element:', htmlElement.tagName);
           try {
             htmlElement.contentEditable = 'false';
-            htmlElement.style.outline = '2px solid transparent';
+            console.log('Set contentEditable to false for:', htmlElement.tagName);
             
             if (onTextEdit) {
-              // Get text content but exclude all handle symbols
-              let newText = htmlElement.textContent || '';
-              // Remove all possible handle symbols
-              newText = newText.replace(/[⋮⠿↻]/g, '').trim();
-              
-              console.log('Calling onTextEdit with clean text:', newText);
+              const newText = htmlElement.textContent || '';
+              console.log('Calling onTextEdit with text:', newText);
               onTextEdit(htmlElement, newText);
             }
           } catch (error) {
@@ -652,125 +634,70 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           }
         };
         
-        // Function to show/hide handles based on selection
+        // Simple handle visibility - always hide handles for now
         const updateHandleVisibility = () => {
-          const isSelected = htmlElement.classList.contains('selected');
-          console.log(`Element ${htmlElement.tagName} selected: ${isSelected}, editMode: ${editMode}`);
-          
-          // If not in edit mode, never show handles or selection state
-          if (!editMode) {
-            htmlElement.style.outline = 'none';
-            allHandles.forEach(handle => {
-              handle.style.display = 'none';
-              handle.style.opacity = '0';
-            });
-            console.log('Not in edit mode - hiding all handles');
-            return;
-          }
-          
-          if (isSelected) {
-            // Show handles with full opacity when selected
-            htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.8)';
-            allHandles.forEach(handle => {
-              handle.style.display = 'block';
-              handle.style.opacity = '1';
-            });
-            adjustHandlePositions(); // Adjust positions when showing handles
-            console.log('Showing', allHandles.length, 'handles for selected element');
-          } else {
-            // Hide handles when not selected
-            htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.1)';
-            allHandles.forEach(handle => {
-              handle.style.display = 'none';
-              handle.style.opacity = '0';
-            });
-            console.log('Hiding handles for unselected element');
-          }
+          // Hide all handles - we're starting fresh
+          allHandles.forEach(handle => {
+            handle.style.display = 'none';
+            handle.style.opacity = '0';
+          });
         };
         
         // Initial visibility update
         updateHandleVisibility();
         
-        // Add hover effect for subtle outline
+        // Simple hover effects
         const handleMouseEnter = () => {
-          if (!htmlElement.classList.contains('selected')) {
-            htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.3)';
-          }
+          // No hover effects for now - keeping it simple
         };
         
         const handleMouseLeave = () => {
-          if (!htmlElement.classList.contains('selected')) {
-            htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.1)';
-          }
+          // No hover effects for now - keeping it simple
         };
         
+        // DRAG EVENT LISTENERS COMMENTED OUT - STARTING FRESH
+        /*
         // Attach interaction handlers to all handles
         allHandles.forEach(handle => {
           handle.addEventListener('mousedown', handleInteractionStart);
           console.log('Attached interaction listener to handle:', handle.dataset.handleName, handle.dataset.handleType);
         });
+        */
         
         // Attach editing to the text element
         htmlElement.addEventListener('click', handleTextClick);
+        htmlElement.addEventListener('mousedown', handleMouseDown);
         htmlElement.addEventListener('blur', handleBlur);
         htmlElement.addEventListener('mouseenter', handleMouseEnter);
         htmlElement.addEventListener('mouseleave', handleMouseLeave);
         
-        // Watch for selection changes
-        const observer = new MutationObserver((mutations) => {
-          mutations.forEach((mutation) => {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-              updateHandleVisibility();
-            }
-          });
-        });
+        // Make sure text elements are clickable
+        if (htmlElement.tagName.match(/^H[1-6]$|^P$|^DIV$/)) {
+          htmlElement.style.cursor = 'text';
+          htmlElement.style.pointerEvents = 'auto';
+        }
         
-        observer.observe(htmlElement, {
-          attributes: true,
-          attributeFilter: ['class']
-        });
+        console.log('Attached event listeners to element:', htmlElement.tagName);
         
-        // Also handle images and iframes for selection
+        // No observer needed - keeping it simple
+        
+        // Simple image/iframe click handler
         if (htmlElement.tagName === 'IMG' || htmlElement.tagName === 'IFRAME') {
           htmlElement.addEventListener('click', (e) => {
             e.stopPropagation();
-            
-            // Remove selection from all other elements
-            const allElements = contentRef.current!.querySelectorAll('h1, h2, h3, p, div, img, iframe');
-            allElements.forEach((el) => {
-              if (el !== htmlElement) {
-                (el as HTMLElement).classList.remove('selected');
-              }
-            });
-            
-            // Add selection to this element
-            htmlElement.classList.add('selected');
+            console.log('Clicked on image/iframe:', htmlElement.tagName);
           });
         }
         
-        // Store cleanup function
+        // Simple cleanup function
         cleanupFunctions.push(() => {
           console.log('Cleaning up element:', htmlElement.tagName);
-          allHandles.forEach(handle => {
-            handle.removeEventListener('mousedown', handleInteractionStart);
-            if (handle.parentNode) {
-              handle.parentNode.removeChild(handle);
-            }
-          });
           htmlElement.removeEventListener('click', handleTextClick);
+          htmlElement.removeEventListener('mousedown', handleMouseDown);
           htmlElement.removeEventListener('blur', handleBlur);
           htmlElement.removeEventListener('mouseenter', handleMouseEnter);
           htmlElement.removeEventListener('mouseleave', handleMouseLeave);
-          observer.disconnect();
-          document.removeEventListener('mousemove', handleInteractionMove);
-          document.removeEventListener('mouseup', handleInteractionEnd);
-          htmlElement.style.cursor = '';
-          htmlElement.style.outline = '';
-          htmlElement.style.position = '';
-          htmlElement.style.transform = '';
           htmlElement.contentEditable = 'false';
-          // Clear any selection state
-          htmlElement.classList.remove('selected');
           console.log('Cleanup complete for element');
         });
       });
