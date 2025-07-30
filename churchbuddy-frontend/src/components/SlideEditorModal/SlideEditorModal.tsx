@@ -64,6 +64,8 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     }, 100);
   }, [slide.html]);
 
+  // KEYBOARD EVENTS DISABLED - STARTING FRESH
+  /*
   // Add keyboard event listener for delete functionality
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -109,6 +111,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
+  */
 
   // Initialize z-index for elements that don't have one
   const initializeElementZIndex = () => {
@@ -131,6 +134,8 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     });
   };
 
+  // TEXT BOX FUNCTION DISABLED - STARTING FRESH
+  /*
   // Add new text box function
   const handleAddTextBox = () => {
     console.log('=== ADDING NEW TEXT BOX ===');
@@ -187,6 +192,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
       console.error('Error adding new text box:', error);
     }
   };
+  */
 
   // Media Library handlers
   const handleOpenMediaLibrary = () => {
@@ -211,6 +217,8 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     setIsMediaLibraryOpen(false);
   };
 
+  // FONT AND STYLING HANDLERS DISABLED - STARTING FRESH
+  /*
   // Font and styling handlers
   const handleFontFamilyChange = (fontFamily: string) => {
     const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
@@ -251,6 +259,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
       saveElementState();
     }
   };
+  */
 
   const handleAddImage = (imageUrl: string, imageName: string) => {
     const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
@@ -354,6 +363,8 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     setHasBackground(false);
   };
 
+  // DELETE FUNCTION DISABLED - STARTING FRESH
+  /*
   // Delete selected element function
   const handleDeleteSelected = () => {
     const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
@@ -377,7 +388,10 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
       saveElementState();
     }
   };
+  */
 
+  // SAVE ELEMENT STATE FUNCTION DISABLED - STARTING FRESH
+  /*
   // Helper function to save element state without ghost boxes
   const saveElementState = () => {
     // Remove any existing handles before saving
@@ -409,6 +423,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     };
     onSave(updatedSlide, false);
   };
+  */
 
   // Auto-save all changes before modal closes
   const handleClose = () => {
@@ -455,12 +470,15 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
     if (slideContent) {
       const textElements = slideContent.querySelectorAll('h1, h2, h3, p, div');
+      // TEXT EDITING DISABLED - STARTING FRESH
+      /*
       textElements.forEach((el) => {
         const htmlEl = el as HTMLElement;
         // Force save current state of each element
         const currentText = htmlEl.textContent?.replace(/[⋮⠿↻🔄✋]/g, '').trim() || '';
         handleTextEdit(htmlEl, currentText);
       });
+      */
     }
     
     // Small delay to ensure all saves complete, then close
@@ -470,6 +488,8 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     }, 200);
   };
 
+  // LAYER MANAGEMENT FUNCTIONS DISABLED - STARTING FRESH
+  /*
   // Layer management functions
   const getElementsInSlide = (): HTMLElement[] => {
     const container = document.querySelector('[data-slide-id="modal-editor"]');
@@ -488,7 +508,10 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
       el.style.zIndex = (idx + 1).toString();
     });
   };
+  */
 
+  // LAYER MANAGEMENT FUNCTIONS DISABLED - STARTING FRESH
+  /*
   const handleLayerForward = () => {
     console.log('=== LAYER FORWARD CLICKED ===');
     const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement | null;
@@ -518,6 +541,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
   const handleLayerBack = () => {
     console.log('=== LAYER BACK CLICKED ===');
     const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement | null;
+    as HTMLElement | null;
     if (!selectedElement) {
       alert('Please select an element first (click on it)');
       return;
@@ -537,37 +561,47 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
 
     saveElementState();
   };
+  */
 
   if (!isOpen) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    // Only ignore if clicking on the backdrop itself, not on content
-    if (e.target === e.currentTarget) {
-      console.log('Backdrop clicked - ignoring (backdrop close disabled)');
-    }
+    // Backdrop click disabled - only close button can close modal
+    console.log('Backdrop clicked - ignoring (backdrop close disabled)');
   };
 
 
 
+  // TEXT EDIT FUNCTION DISABLED - STARTING FRESH
+  /*
   const handleTextEdit = (element: HTMLElement, newText: string) => {
     console.log('=== TEXT EDIT START ===');
-    console.log('New text:', newText);
 
     try {
-      // Update the element's text content
-      element.textContent = newText;
-      
-      // Get the updated HTML from the DOM
+      // After user edits, rebuild entire slide HTML from DOM to ensure consistency
       const slideContentEl = document.querySelector('[data-slide-id="modal-editor"]');
       if (!slideContentEl) {
         console.error('Slide content element not found for saving!');
         return;
       }
 
-      const cleanHtml = slideContentEl.innerHTML;
+      // Clone to avoid modifying live DOM while cleaning
+      const cloned = slideContentEl.cloneNode(true) as HTMLElement;
+
+      // Remove only actual handle elements, not content elements
+      cloned.querySelectorAll('[data-handle-name][data-handle-type]').forEach(h => h.remove());
+
+      // Serialize cleaned HTML
+      const cleanHtml = cloned.innerHTML;
+
+      if (cleanHtml === currentSlideHtml) {
+        console.log('HTML unchanged after edit – skipping save');
+        return;
+      }
+
       setCurrentSlideHtml(cleanHtml);
 
-      // Save the updated slide
+      // Persist via onSave
       const updatedSlide: ISlide = {
         ...slide,
         html: cleanHtml,
@@ -580,6 +614,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
       console.error('Error during text edit save', err);
     }
   };
+  */
 
   const handleAddVideoSlide = () => {
     const videoUrl = prompt('⚠️ WARNING: This will replace your current slide and text cannot be added to it.\n\nEnter YouTube video URL:');
@@ -650,20 +685,22 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
 
         {/* Toolbar */}
         <div className={styles.toolbar}>
-          {/* Text Tools */}
+          {/* Text Tools - DISABLED */}
           <div className={styles.toolGroup}>
             <span className={styles.groupLabel}>Text</span>
             <button 
               className={styles.toolButton} 
-              title="Add Text Box" 
-              onClick={handleAddTextBox}
+              title="Add Text Box (Disabled)" 
+              onClick={() => {}}
+              disabled
             >
               T+
             </button>
             <select 
               className={styles.toolSelect} 
-              title="Font Family"
-              onChange={(e) => handleFontFamilyChange(e.target.value)}
+              title="Font Family (Disabled)"
+              onChange={() => {}}
+              disabled
             >
               <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica Neue</option>
               <option value="Futura, 'Trebuchet MS', Arial, sans-serif">Futura</option>
@@ -674,29 +711,33 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
               type="number" 
               className={styles.toolInput} 
               placeholder="24" 
-              title="Font Size"
+              title="Font Size (Disabled)"
               min="8"
               max="500"
-              onChange={(e) => handleFontSizeChange(e.target.value)}
+              onChange={() => {}}
+              disabled
             />
             <input 
               type="color" 
               className={styles.colorPicker} 
               defaultValue="#ffffff"
-              title="Text Color"
-              onChange={(e) => handleColorChange(e.target.value)}
+              title="Text Color (Disabled)"
+              onChange={() => {}}
+              disabled
             />
             <button 
               className={styles.toolButton} 
-              title="Bold"
-              onClick={handleBoldToggle}
+              title="Bold (Disabled)"
+              onClick={() => {}}
+              disabled
             >
               <strong>B</strong>
             </button>
             <button 
               className={styles.toolButton} 
-              title="Italic"
-              onClick={handleItalicToggle}
+              title="Italic (Disabled)"
+              onClick={() => {}}
+              disabled
             >
               <em>I</em>
             </button>
@@ -727,52 +768,37 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
             </button>
             <button 
               className={styles.toolButton} 
-              title="Save Positions"
-              onClick={() => {
-                // Force save all current positions
-                const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
-                if (slideContent) {
-                  const textElements = slideContent.querySelectorAll('h1, h2, h3, p, div');
-                  textElements.forEach((el) => {
-                    const htmlEl = el as HTMLElement;
-                    if (htmlEl.style.transform) {
-                      // Trigger save with current text and position (auto-save, don't close modal)
-                      handleTextEdit(htmlEl, htmlEl.textContent?.replace(/⋮⋮/g, '').trim() || '');
-                    }
-                  });
-                }
-              }}
+              title="Save Positions (Disabled)"
+              onClick={() => {}}
+              disabled
             >
               Save
             </button>
             <button 
               className={styles.toolButton} 
-              title="Delete Selected (or press Delete key)"
-              onClick={handleDeleteSelected}
+              title="Delete Selected (Disabled)"
+              onClick={() => {}}
+              disabled
             >
               Delete
             </button>
             <button 
               className={styles.toolButton} 
-              title="Move Layer Forward"
-              onClick={() => {
-                console.log('Layer Forward button clicked!');
-                handleLayerForward();
-              }}
+              title="Move Layer Forward (Disabled)"
+              onClick={() => {}}
+              disabled
             >
               Layer Forward
             </button>
             <button 
               className={styles.toolButton} 
-              title="Move Layer Back"
-              onClick={() => {
-                console.log('Layer Back button clicked!');
-                handleLayerBack();
-              }}
+              title="Move Layer Back (Disabled)"
+              onClick={() => {}}
+              disabled
             >
               Layer Back
             </button>
-            <button className={styles.toolButton} title="Duplicate Selected">
+            <button className={styles.toolButton} title="Duplicate Selected (Disabled)" disabled>
               Duplicate
             </button>
           </div>
@@ -786,7 +812,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
               <SlideRenderer 
                 slide={{...slide, html: currentSlideHtml}} 
                 editMode={true}
-                onTextEdit={handleTextEdit}
+                onTextEdit={() => {}} // DISABLED - STARTING FRESH
                 uniqueId="modal-editor"
                 isActive={false}
               />

@@ -120,9 +120,9 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
       allElements.forEach((htmlElement) => {
         if (!(htmlElement instanceof HTMLElement)) return;
 
-        // Always process elements to ensure event listeners are attached
-        // Remove any existing processed flag to allow re-processing
-        delete htmlElement.dataset.processed;
+        // Skip if already processed
+        if (htmlElement.dataset.processed === 'true') return;
+        htmlElement.dataset.processed = 'true';
 
         // Create handles for this element
         const allHandles: HTMLElement[] = [];
@@ -213,8 +213,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           console.log(`Created edge handle: ${pos.name}`);
         });
         
-        // DRAG HANDLE COMMENTED OUT - STARTING FRESH
-        /*
         // Create drag handle (bottom center with icon) - clean rectangular design
         const dragHandle = document.createElement('div');
         dragHandle.style.position = 'absolute';
@@ -260,7 +258,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         } else {
           htmlElement.appendChild(dragHandle);
         }
-        */
         
         // Create rotate button (next to drag handle) - clean rectangular design
         const rotateButton = document.createElement('div');
@@ -370,8 +367,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             }
           });
           
-          // DRAG HANDLE POSITIONING COMMENTED OUT - STARTING FRESH
-          /*
           // Position drag handle directly below element, left side
           let dragX = elementLeft;
           let dragY = elementTop + elementHeight + 10;
@@ -391,11 +386,10 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           dragHandle.style.top = `${dragY}px`;
           dragHandle.style.bottom = 'auto';
           dragHandle.style.transform = 'none';
-          */
           
           // Position rotate button directly below element, right side
           let rotateX = elementLeft + elementWidth - 120; // Increased from 90px to 120px for more spacing
-          let rotateY = elementTop + elementHeight + 10; // Use element position instead of dragY
+          let rotateY = dragY;
           
           // Ensure rotate button doesn't go off right edge
           if (rotateX > containerRect.width - 20) {
@@ -415,8 +409,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         adjustHandlePositions();
         
         // Set up interaction handlers
-        // DRAG VARIABLES COMMENTED OUT - STARTING FRESH
-        /*
         let isDragging = false;
         let isResizing = false;
         let currentHandle: HTMLElement | null = null;
@@ -427,10 +419,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         let originalWidth = 0;
         let originalHeight = 0;
         let originalTransform = '';
-        */
         
-        // DRAG INTERACTION HANDLERS COMMENTED OUT - STARTING FRESH
-        /*
         const handleInteractionStart = (e: MouseEvent) => {
           e.preventDefault();
           e.stopPropagation();
@@ -488,7 +477,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             adjustHandlePositions();
           }
         };
-        */
         
         const getCurrentRotation = (element: HTMLElement): number => {
           const transform = element.style.transform || '';
@@ -503,8 +491,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           adjustHandlePositions();
         };
         
-        // DRAG MOVE HANDLER COMMENTED OUT - STARTING FRESH
-        /*
         const handleInteractionMove = (e: MouseEvent) => {
           if (!isDragging && !isResizing) return;
           
@@ -583,10 +569,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             adjustHandlePositions();
           }
         };
-        */
         
-        // DRAG END HANDLER COMMENTED OUT - STARTING FRESH
-        /*
         const handleInteractionEnd = () => {
           isDragging = false;
           isResizing = false;
@@ -595,109 +578,204 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           document.removeEventListener('mousemove', handleInteractionMove);
           document.removeEventListener('mouseup', handleInteractionEnd);
         };
-        */
         
-        // Simple click handler for editing
+        // TEXT CLICK HANDLER DISABLED - STARTING FRESH
+        /*
+        // Add click handler for editing
         const handleTextClick = (e: Event) => {
           e.stopPropagation();
-          e.preventDefault();
-          console.log('Click detected on element:', htmlElement.tagName, 'contentEditable:', htmlElement.contentEditable);
           
-          // Make text elements editable on click
+          // Remove selection from all other elements
+          const allElements = contentRef.current!.querySelectorAll('h1, h2, h3, p, div, img, iframe');
+          allElements.forEach((el) => {
+            if (el !== htmlElement) {
+              (el as HTMLElement).classList.remove('selected');
+              (el as HTMLElement).blur();
+              (el as HTMLElement).contentEditable = 'false';
+            }
+          });
+          
+          // Add selection to this element
+          htmlElement.classList.add('selected');
+          
+          const wasAlreadyEditable = htmlElement.contentEditable === 'true';
+          
+          // Add editing outline
+          htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.5)';
+          
+          // Make contentEditable for text elements
           if (htmlElement.tagName.match(/^H[1-6]$|^P$|^DIV$/)) {
             htmlElement.contentEditable = 'true';
-            htmlElement.focus();
-            console.log('Made element editable:', htmlElement.tagName);
+            
+            if (!wasAlreadyEditable) {
+              // Only select all text on first click to enter edit mode
+              htmlElement.focus();
+              const range = document.createRange();
+              range.selectNodeContents(htmlElement);
+              const selection = window.getSelection();
+              selection?.removeAllRanges();
+              selection?.addRange(range);
+              console.log('Entering edit mode - selected all text');
+            } else {
+              // If already editable, just focus but don't change selection
+              console.log('Already in edit mode - preserving cursor position');
+            }
           }
         };
+        */
         
-        // Also handle mousedown to ensure click is captured
-        const handleMouseDown = (e: Event) => {
-          e.stopPropagation();
-          console.log('MouseDown detected on element:', htmlElement.tagName);
-        };
-        
-                // Simple blur handler to save changes
+        // BLUR HANDLER DISABLED - STARTING FRESH
+        /*
+        // Add blur handler to save changes
         const handleBlur = () => {
-          console.log('Text blur - saving changes for element:', htmlElement.tagName);
+          console.log('Text blur - saving changes');
           try {
             htmlElement.contentEditable = 'false';
-            console.log('Set contentEditable to false for:', htmlElement.tagName);
+            htmlElement.style.outline = '2px solid transparent';
             
             if (onTextEdit) {
-              const newText = htmlElement.textContent || '';
-              console.log('Calling onTextEdit with text:', newText);
+              // Get text content but exclude all handle symbols
+              let newText = htmlElement.textContent || '';
+              // Remove all possible handle symbols
+              newText = newText.replace(/[⋮⠿↻]/g, '').trim();
+              
+              console.log('Calling onTextEdit with clean text:', newText);
               onTextEdit(htmlElement, newText);
             }
           } catch (error) {
             console.error('Error in handleBlur:', error);
           }
         };
+        */
         
-        // Simple handle visibility - always hide handles for now
+        // Function to show/hide handles based on selection
         const updateHandleVisibility = () => {
-          // Hide all handles - we're starting fresh
-          allHandles.forEach(handle => {
-            handle.style.display = 'none';
-            handle.style.opacity = '0';
-          });
+          const isSelected = htmlElement.classList.contains('selected');
+          console.log(`Element ${htmlElement.tagName} selected: ${isSelected}, editMode: ${editMode}`);
+          
+          // If not in edit mode, never show handles or selection state
+          if (!editMode) {
+            htmlElement.style.outline = 'none';
+            allHandles.forEach(handle => {
+              handle.style.display = 'none';
+              handle.style.opacity = '0';
+            });
+            console.log('Not in edit mode - hiding all handles');
+            return;
+          }
+          
+          if (isSelected) {
+            // Show handles with full opacity when selected
+            htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.8)';
+            allHandles.forEach(handle => {
+              handle.style.display = 'block';
+              handle.style.opacity = '1';
+            });
+            adjustHandlePositions(); // Adjust positions when showing handles
+            console.log('Showing', allHandles.length, 'handles for selected element');
+          } else {
+            // Hide handles when not selected
+            htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.1)';
+            allHandles.forEach(handle => {
+              handle.style.display = 'none';
+              handle.style.opacity = '0';
+            });
+            console.log('Hiding handles for unselected element');
+          }
         };
         
         // Initial visibility update
         updateHandleVisibility();
         
-        // Simple hover effects
+        // Add hover effect for subtle outline
         const handleMouseEnter = () => {
-          // No hover effects for now - keeping it simple
+          if (!htmlElement.classList.contains('selected')) {
+            htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.3)';
+          }
         };
         
         const handleMouseLeave = () => {
-          // No hover effects for now - keeping it simple
+          if (!htmlElement.classList.contains('selected')) {
+            htmlElement.style.outline = '2px solid rgba(255, 255, 255, 0.1)';
+          }
         };
         
-        // DRAG EVENT LISTENERS COMMENTED OUT - STARTING FRESH
-        /*
         // Attach interaction handlers to all handles
         allHandles.forEach(handle => {
           handle.addEventListener('mousedown', handleInteractionStart);
           console.log('Attached interaction listener to handle:', handle.dataset.handleName, handle.dataset.handleType);
         });
-        */
         
+        // TEXT EDITING EVENT LISTENERS DISABLED - STARTING FRESH
+        /*
         // Attach editing to the text element
         htmlElement.addEventListener('click', handleTextClick);
-        htmlElement.addEventListener('mousedown', handleMouseDown);
         htmlElement.addEventListener('blur', handleBlur);
         htmlElement.addEventListener('mouseenter', handleMouseEnter);
         htmlElement.addEventListener('mouseleave', handleMouseLeave);
+        */
         
-        // Make sure text elements are clickable
-        if (htmlElement.tagName.match(/^H[1-6]$|^P$|^DIV$/)) {
-          htmlElement.style.cursor = 'text';
-          htmlElement.style.pointerEvents = 'auto';
-        }
+        // Watch for selection changes
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+              updateHandleVisibility();
+            }
+          });
+        });
         
-        console.log('Attached event listeners to element:', htmlElement.tagName);
+        observer.observe(htmlElement, {
+          attributes: true,
+          attributeFilter: ['class']
+        });
         
-        // No observer needed - keeping it simple
-        
-        // Simple image/iframe click handler
+        // IMAGE/IFRAME SELECTION DISABLED - STARTING FRESH
+        /*
+        // Also handle images and iframes for selection
         if (htmlElement.tagName === 'IMG' || htmlElement.tagName === 'IFRAME') {
           htmlElement.addEventListener('click', (e) => {
             e.stopPropagation();
-            console.log('Clicked on image/iframe:', htmlElement.tagName);
+            
+            // Remove selection from all other elements
+            const allElements = contentRef.current!.querySelectorAll('h1, h2, h3, p, div, img, iframe');
+            allElements.forEach((el) => {
+              if (el !== htmlElement) {
+                (el as HTMLElement).classList.remove('selected');
+              }
+            });
+            
+            // Add selection to this element
+            htmlElement.classList.add('selected');
           });
         }
+        */
         
-        // Simple cleanup function
+        // Store cleanup function
         cleanupFunctions.push(() => {
           console.log('Cleaning up element:', htmlElement.tagName);
+          allHandles.forEach(handle => {
+            handle.removeEventListener('mousedown', handleInteractionStart);
+            if (handle.parentNode) {
+              handle.parentNode.removeChild(handle);
+            }
+          });
+          // TEXT EDITING CLEANUP DISABLED - STARTING FRESH
+          /*
           htmlElement.removeEventListener('click', handleTextClick);
-          htmlElement.removeEventListener('mousedown', handleMouseDown);
           htmlElement.removeEventListener('blur', handleBlur);
           htmlElement.removeEventListener('mouseenter', handleMouseEnter);
           htmlElement.removeEventListener('mouseleave', handleMouseLeave);
+          */
+          observer.disconnect();
+          document.removeEventListener('mousemove', handleInteractionMove);
+          document.removeEventListener('mouseup', handleInteractionEnd);
+          htmlElement.style.cursor = '';
+          htmlElement.style.outline = '';
+          htmlElement.style.position = '';
+          htmlElement.style.transform = '';
           htmlElement.contentEditable = 'false';
+          // Clear any selection state
+          htmlElement.classList.remove('selected');
           console.log('Cleanup complete for element');
         });
       });
