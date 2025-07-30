@@ -762,21 +762,8 @@ function App() {
   };
 
   const handleAddToDeck = () => {
-    if (selectedAssetDeck && editingSlide) {
-      // Add the current editing slide to the selected asset deck
-      const updatedAssetDeck = {
-        ...selectedAssetDeck,
-        slideIds: [...selectedAssetDeck.slideIds, editingSlide.id],
-        updatedAt: new Date()
-      };
-      
-      setAssetDecksList(prev => prev.map(deck => 
-        deck.id === selectedAssetDeck.id ? updatedAssetDeck : deck
-      ));
-      setSelectedAssetDeck(updatedAssetDeck);
-      
-      console.log('Added slide to asset deck:', editingSlide.id);
-    }
+    // Slide editing removed - this function is no longer needed
+    console.log('Add to deck functionality removed');
   };
 
   const handleNewAsset = () => {
@@ -791,7 +778,7 @@ function App() {
     };
     
     setSlides(prev => [...prev, newSlide]);
-    setEditingSlide(newSlide); // Load the new slide into the editor
+    // Slide editing removed - slide created but not loaded into editor
     
     console.log('Created new asset slide:', newSlide);
   };
@@ -803,7 +790,7 @@ function App() {
       const slideId = selectedAssetDeck.slideIds[newIndex];
       const slide = slides.find(s => s.id === slideId);
       if (slide) {
-        setEditingSlide(slide);
+        // Slide editing removed - slide found but not loaded into editor
       }
     }
   };
