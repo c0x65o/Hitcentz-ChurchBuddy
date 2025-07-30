@@ -802,7 +802,7 @@ function App() {
       const slideId = selectedAssetDeck.slideIds[newIndex];
       const slide = slides.find(s => s.id === slideId);
       if (slide) {
-        setEditingSlide(slide);
+        // Slide editing removed - slide found but not loaded into editor
       }
     }
   };
@@ -2347,7 +2347,6 @@ function App() {
               }
               return slides;
             })()}
-            onEdit={handleEdit}
             onDelete={handleDelete}
             title={selectedFlowCollection ? (() => {
               const song = songsList.find(s => s.id === selectedFlowCollection.id);
@@ -2401,7 +2400,6 @@ function App() {
           {/* SlideThumbnailList as popout overlay for Sermons */}
           <SlideThumbnailList
             slides={slides.filter(slide => selectedSermon?.slideIds.includes(slide.id) || !selectedSermon)}
-            onEdit={handleEdit}
             onSlideClick={isPreachMode ? handleSlideActivation : undefined}
             title={selectedSermon?.title || "Sermons"}
           />
@@ -2422,7 +2420,6 @@ function App() {
             {/* Fixed Slide Thumbnails */}
             <SlideThumbnailList
               slides={slides}
-              onEdit={handleEdit}
               onDelete={handleDelete}
               title="Slides"
             />
