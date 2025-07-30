@@ -695,7 +695,7 @@ function App() {
         const firstSlideId = assetDeck.slideIds[0];
         const firstSlide = slides.find(s => s.id === firstSlideId);
         if (firstSlide) {
-          setEditingSlide(firstSlide);
+          // Slide editing removed - just select the asset deck
         }
       } else {
         // If deck is empty, automatically create a new asset (like clicking "New Asset")
@@ -709,7 +709,7 @@ function App() {
         };
         
         setSlides(prev => [...prev, newSlide]);
-        setEditingSlide(newSlide); // Load the new slide into the editor
+        // Slide editing removed - slide created but not loaded into editor
         
         // Add the new slide to the selected asset deck
         const updatedAssetDeck = {
@@ -755,7 +755,7 @@ function App() {
     setAssetDecksList(prev => [...prev, newAssetDeck]);
     setSelectedAssetDeck(newAssetDeck);
     setCurrentSlideIndex(0);
-    setEditingSlide(newSlide); // Load the new slide into the editor
+    // Slide editing removed - slide created but not loaded into editor
     setShowAssetDeckTitleModal(false);
     
     console.log('Created new asset deck with initial slide:', newAssetDeck);
