@@ -44,6 +44,7 @@ const initDatabase = () => {
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         html TEXT NOT NULL,
+        jsonData TEXT,
         orderNum INTEGER,
         createdAt TEXT,
         updatedAt TEXT
@@ -224,6 +225,7 @@ app.get('/api/slides', (req, res) => {
     res.json(rows.map(row => ({
       ...row,
       order: row.orderNum,
+      jsonData: row.jsonData ? JSON.parse(row.jsonData) : undefined,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt)
     })));
@@ -232,12 +234,12 @@ app.get('/api/slides', (req, res) => {
 
 // Create/Update slide
 app.post('/api/slides', (req, res) => {
-  const { id, title, html, order } = req.body;
+  const { id, title, html, jsonData, order } = req.body;
   const now = new Date().toISOString();
   
   db.run(
-    'INSERT OR REPLACE INTO slides (id, title, html, orderNum, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
-    [id, title, html, order, now, now],
+    'INSERT OR REPLACE INTO slides (id, title, html, jsonData, orderNum, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [id, title, html, jsonData ? JSON.stringify(jsonData) : null, order, now, now],
     function(err) {
       if (err) {
         res.status(500).json({ error: err.message });
@@ -247,6 +249,34 @@ app.post('/api/slides', (req, res) => {
         id, 
         title, 
         html, 
+        jsonData: jsonData ? JSON.parse(JSON.stringify(jsonData)) : undefined,
+        order,
+        createdAt: new Date(now),
+        updatedAt: new Date(now)
+      });
+    }
+  );
+});
+
+// Update slide
+app.put('/api/slides/:id', (req, res) => {
+  const { id } = req.params;
+  const { title, html, jsonData, order } = req.body;
+  const now = new Date().toISOString();
+  
+  db.run(
+    'UPDATE slides SET title = ?, html = ?, jsonData = ?, orderNum = ?, updatedAt = ? WHERE id = ?',
+    [title, html, jsonData ? JSON.stringify(jsonData) : null, order, now, id],
+    function(err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json({ 
+        id, 
+        title, 
+        html, 
+        jsonData: jsonData ? JSON.parse(JSON.stringify(jsonData)) : undefined,
         order,
         createdAt: new Date(now),
         updatedAt: new Date(now)
