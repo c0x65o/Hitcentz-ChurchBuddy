@@ -1,0 +1,33 @@
+<!-- slide-editor.html -->
+<div class="slide-editor-container" tabindex="-1">
+    <div class="slide-editor-toolbar">
+        <div class="toolbar-group">
+            <button class="toolbar-btn" data-action="add-text" title="Add Text Box"><i class="fas fa-font"></i> Add Text</button>
+            <button class="toolbar-btn" data-action="add-image" title="Add Image"><i class="fas fa-image"></i> Add Image</button>
+        </div>
+        <div class="toolbar-divider"></div>
+        
+        <!-- Context-sensitive tools for the selected element appear here -->
+        <div id="element-toolbar" class="toolbar-group">
+             <span class="toolbar-placeholder">Select an element to see formatting options</span>
+        </div>
+        
+        <div class="toolbar-group" style="margin-left: auto;">
+             <div id="layer-controls" class="toolbar-group" style="display: none;">
+                <button class="toolbar-btn" data-action="move-to-back" title="Send to Back"><i class="fas fa-angle-double-down"></i></button>
+                <button class="toolbar-btn" data-action="move-backward" title="Move Backward"><i class="fas fa-level-down-alt"></i></button>
+                <button class="toolbar-btn" data-action="move-forward" title="Move Forward"><i class="fas fa-level-up-alt"></i></button>
+                <button class="toolbar-btn" data-action="move-to-front" title="Bring to Front"><i class="fas fa-angle-double-up"></i></button>
+             </div>
+             <div class="toolbar-divider" id="layer-divider" style="display: none; margin: 0 8px;"></div>
+             <button class="toolbar-btn" data-action="delete-element" title="Delete Selected" disabled><i class="fas fa-trash-alt"></i></button>
+        </div>
+    </div>
+    <div class="slide-editor-main">
+        <div class="slide-editor-canvas-wrapper">
+            <div id="slide-canvas" class="slide-canvas">
+                <!-- Editable slide content goes here -->
+            </div>
+        </div>
+    </div>
+</div>

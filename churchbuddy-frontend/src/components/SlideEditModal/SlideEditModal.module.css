@@ -1,0 +1,189 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #1a1a1a;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #333;
+  background: #2a2a2a;
+}
+
+.header h2 {
+  margin: 0;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.headerButtons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.addTextButton {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.addTextButton:hover {
+  background: #0056b3;
+}
+
+.closeButton {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.closeButton:hover {
+  background: #545b62;
+}
+
+.saveButton {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.saveButton:hover {
+  background: #1e7e34;
+}
+
+.editorContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  background: #1a1a1a;
+  min-height: 500px;
+  overflow: auto;
+}
+
+.slideContainer {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  aspect-ratio: 16/9;
+  border: 2px solid #333;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.backgroundSlide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.backgroundRenderer {
+  width: 100%;
+  height: 100%;
+}
+
+.textElement {
+  position: absolute;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  min-width: 20px;
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.textElement:hover {
+  background: rgba(0, 123, 255, 0.1);
+  border: 1px solid rgba(0, 123, 255, 0.3);
+}
+
+.textElement.selected {
+  background: rgba(0, 123, 255, 0.2);
+  border: 2px solid #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+}
+
+.footer {
+  padding: 16px 24px;
+  border-top: 1px solid #333;
+  background: #2a2a2a;
+  text-align: center;
+}
+
+.footer p {
+  margin: 0;
+  color: #ccc;
+  font-size: 14px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .modal {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+  
+  .header {
+    padding: 16px 20px;
+  }
+  
+  .header h2 {
+    font-size: 18px;
+  }
+  
+  .editorContainer {
+    padding: 16px;
+    min-height: 400px;
+  }
+  
+  .saveButton {
+    padding: 8px 16px;
+  }
+} 
