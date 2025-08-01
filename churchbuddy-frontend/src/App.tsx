@@ -8,6 +8,7 @@ import Sidebar from './components/Sidebar/Sidebar';
 import TextEditor from './components/TextEditor/TextEditor';
 import MyMediaLibrary from './components/MyMediaLibrary/MyMediaLibrary';
 import CreateItemModal from './components/CreateItemModal/CreateItemModal';
+import { SlideEditorModal } from './components/SlideEditorModal/SlideEditorModal';
 import { ISlide } from './types/ISlide';
 import { ISong } from './types/ISong';
 import { ISermon } from './types/ISermon';
@@ -61,6 +62,10 @@ function App() {
   const [flowsList, setFlowsList] = useState<IFlow[]>([]);
   const [selectedFlow, setSelectedFlow] = useState<IFlow | null>(null);
   const [showFlowTitleModal, setShowFlowTitleModal] = useState(false);
+  
+  // Slide Editor state
+  const [slideEditorModalOpen, setSlideEditorModalOpen] = useState(false);
+  const [editingSlide, setEditingSlide] = useState<ISlide | null>(null);
   
   const [currentSlide] = useState<ISlide>({
     id: '1',
@@ -134,6 +139,30 @@ function App() {
 
   const handleDelete = (slideId: string) => {
     console.log('Delete slide:', slideId);
+  };
+
+  // Slide Editor handlers
+  const handleEditSlide = (slideId: string) => {
+    const slide = slides.find(s => s.id === slideId);
+    if (slide) {
+      setEditingSlide(slide);
+      setSlideEditorModalOpen(true);
+    }
+  };
+
+  const handleSlideEditorClose = () => {
+    setSlideEditorModalOpen(false);
+    setEditingSlide(null);
+  };
+
+  const handleSlideEditorSave = (updatedSlide: ISlide) => {
+    setSlides(prevSlides =>
+      prevSlides.map(slide =>
+        slide.id === updatedSlide.id ? updatedSlide : slide
+      )
+    );
+    setSlideEditorModalOpen(false);
+    setEditingSlide(null);
   };
 
   const handleSongsSave = (content: string) => {
@@ -1876,6 +1905,7 @@ function App() {
           <SlideThumbnailList
             slides={slides.filter(slide => selectedAssetDeck?.slideIds.includes(slide.id) || !selectedAssetDeck)}
             onDelete={handleDelete}
+            onEdit={handleEditSlide}
             title={selectedAssetDeck?.title || "Asset Deck Slides"}
           />
         </>
@@ -1907,6 +1937,7 @@ function App() {
           {/* SlideThumbnailList as popout overlay for Songs */}
           <SlideThumbnailList
             slides={slides.filter(slide => selectedSong?.slideIds.includes(slide.id) || !selectedSong)}
+            onEdit={handleEditSlide}
             title={selectedSong?.title || "Songs"}
           />
         </>
@@ -2348,6 +2379,7 @@ function App() {
               return slides;
             })()}
             onDelete={handleDelete}
+            onEdit={handleEditSlide}
             title={selectedFlowCollection ? (() => {
               const song = songsList.find(s => s.id === selectedFlowCollection.id);
               const sermon = sermonsList.find(s => s.id === selectedFlowCollection.id);
@@ -2401,6 +2433,7 @@ function App() {
           <SlideThumbnailList
             slides={slides.filter(slide => selectedSermon?.slideIds.includes(slide.id) || !selectedSermon)}
             onSlideClick={isPreachMode ? handleSlideActivation : undefined}
+            onEdit={handleEditSlide}
             title={selectedSermon?.title || "Sermons"}
           />
         </>
@@ -2421,6 +2454,7 @@ function App() {
             <SlideThumbnailList
               slides={slides}
               onDelete={handleDelete}
+              onEdit={handleEditSlide}
               title="Slides"
             />
           </main>
@@ -2803,6 +2837,14 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Slide Editor Modal */}
+      <SlideEditorModal
+        isOpen={slideEditorModalOpen}
+        slide={editingSlide}
+        onClose={handleSlideEditorClose}
+        onSave={handleSlideEditorSave}
+      />
 
       {/* Bulletin Overlay */}
       <BulletinOverlay
