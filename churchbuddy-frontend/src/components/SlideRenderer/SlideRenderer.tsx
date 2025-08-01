@@ -7,9 +7,10 @@ interface SlideRendererProps {
   className?: string;
   disableScaling?: boolean;
   isActive?: boolean; // New prop to control video playback
+  isEditable?: boolean; // New prop to enable contenteditable mode
 }
 
-const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, disableScaling = false, isActive = false }) => {
+const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, disableScaling = false, isActive = false, isEditable = false }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -150,8 +151,17 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, disable
     };
   }, [disableScaling]);
 
-  // Calculate font size for fixed 1920x1080 stage
+  // Check if slide contains contenteditable elements
+  const hasContenteditableElements = slide.html.includes('contenteditable="true"') || slide.html.includes('editable-element');
+
+  // Calculate font size for fixed 1920x1080 stage (only for auto-formatted slides)
   useEffect(() => {
+    if (hasContenteditableElements) {
+      // Skip font calculation for contenteditable slides
+      setFontSize(0);
+      return;
+    }
+
     const calculateFontSize = () => {
       if (!contentRef.current) return;
 
@@ -218,7 +228,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, disable
     return () => {
       clearTimeout(timer);
     };
-  }, [slide.html]);
+  }, [slide.html, hasContenteditableElements]);
 
   return (
     <div 
@@ -234,16 +244,27 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, disable
         }}
     >
       <div className={styles.slideContent}>
-        <div 
-          ref={contentRef}
-          className={styles.slideText}
+        {hasContenteditableElements ? (
+          // Render contenteditable elements directly
+          <div 
+            ref={contentRef}
+            className={styles.slideContenteditable}
+            data-slide-content="true"
+            dangerouslySetInnerHTML={{ __html: slide.html }}
+          />
+        ) : (
+          // Render auto-formatted text
+          <div 
+            ref={contentRef}
+            className={styles.slideText}
             data-slide-content="true"
             style={{ 
               fontSize: `${fontSize}px`,
               visibility: fontSize > 0 ? 'visible' : 'hidden'
             }}
-          dangerouslySetInnerHTML={{ __html: slide.html }}
-        />
+            dangerouslySetInnerHTML={{ __html: slide.html }}
+          />
+        )}
         </div>
       </div>
     </div>

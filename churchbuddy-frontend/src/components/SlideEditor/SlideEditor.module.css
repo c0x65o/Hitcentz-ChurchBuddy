@@ -1,0 +1,171 @@
+/* slide-editor.css */
+.slideEditorContainer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    background-color: #f0f2f5;
+    font-family: 'Poppins', sans-serif;
+    color: #333;
+}
+.slideEditorContainer:focus {
+    outline: none;
+}
+
+/* Toolbar */
+.slideEditorToolbar {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #d1d5db;
+    flex-shrink: 0;
+    gap: 8px;
+}
+
+.toolbarGroup {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.toolbarDivider {
+    width: 1px;
+    height: 24px;
+    background-color: #d1d5db;
+}
+
+.toolbarBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+    color: #374151;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+.toolbarBtn:hover:not(:disabled) {
+    background-color: #f3f4f6;
+}
+.toolbarBtn:disabled {
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+.toolbarBtn i {
+    font-size: 1rem;
+}
+
+.toolbarPlaceholder {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+/* Element Toolbar Inputs */
+.elementToolbar input,
+.elementToolbar select {
+    padding: 4px 6px;
+    border-radius: 4px;
+    border: 1px solid #d1d5db;
+    font-size: 14px;
+}
+.elementToolbar input[type="color"] {
+    width: 28px;
+    height: 28px;
+    padding: 2px;
+    border-radius: 50%;
+}
+.elementToolbar input[type="number"] {
+    width: 60px;
+}
+
+/* Main Canvas Area */
+.slideEditorMain {
+    flex-grow: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 24px;
+    min-height: 400px;
+    width: 100%;
+    height: 100%;
+}
+
+.slideEditorCanvasWrapper {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.slideCanvas {
+    aspect-ratio: 16 / 9;
+    width: 800px;
+    height: 450px;
+    max-width: 100vw;
+    max-height: 80vh;
+    background: #000;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s cubic-bezier(.4,2,.6,1);
+}
+
+/* Editable Elements */
+.editableElement {
+    position: absolute;
+    min-width: 20px;
+    min-height: 20px;
+    border: 2px solid transparent;
+    user-select: none;
+    transition: border-color 0.2s ease;
+}
+.editableElement:hover {
+    border-color: rgba(74, 109, 167, 0.4);
+}
+.editableElement.selected {
+    border-color: #4a6da7; /* var(--primary-color) */
+}
+.editableElement.dragging > *, .editableElement.resizing > * {
+    pointer-events: none;
+}
+.editableElement.imageElement {
+    /* Allow the image inside to control the height */
+    height: auto;
+}
+.editableElement [contenteditable] {
+    cursor: text;
+    width: 100%;
+    height: 100%;
+    outline: none;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+/* Resize Handles */
+.resizeHandle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: #4a6da7;
+    border: 1px solid #fff;
+    border-radius: 50%;
+    z-index: 10;
+    display: none;
+}
+.editableElement.selected .resizeHandle {
+    display: block;
+}
+.resizeHandle.bottomRight {
+    bottom: -6px;
+    right: -6px;
+    cursor: se-resize;
+} 
