@@ -174,60 +174,71 @@ function App() {
     console.log('Generating slides from lyrics:', lyrics);
     console.log('Selected song:', song);
     
-    // Extract text content from HTML with proper line break handling
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = lyrics;
+    // First, check if the content is plain text (no HTML tags)
+    const isPlainText = !lyrics.includes('<') && !lyrics.includes('>');
     
-    // Convert HTML elements to newlines for better parsing
-    // Replace <br> and <br/> with newlines
-    const htmlWithNewlines = tempDiv.innerHTML
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/div>/gi, '\n')
-      .replace(/<div[^>]*>/gi, '')
-      .replace(/<\/p>/gi, '\n')
-      .replace(/<p[^>]*>/gi, '')
-      .replace(/&nbsp;/gi, ' ') // Convert non-breaking spaces to regular spaces
-      .replace(/\n\s*\n/g, '\n\n'); // Normalize multiple newlines
+    let textContent = '';
     
-    console.log('=== DEBUGGING PASTED LYRICS ===');
-    console.log('Original HTML:', tempDiv.innerHTML);
-    console.log('HTML with newlines:', htmlWithNewlines);
-    console.log('HTML contains <br> tags:', tempDiv.innerHTML.includes('<br'));
-    console.log('HTML contains </div> tags:', tempDiv.innerHTML.includes('</div>'));
-    console.log('HTML contains <p> tags:', tempDiv.innerHTML.includes('<p>'));
-    
-    // Create a new temp div with the converted HTML
-    const cleanDiv = document.createElement('div');
-    cleanDiv.innerHTML = htmlWithNewlines;
-    
-    // Use innerText to get the final text with proper line breaks
-    let textContent = cleanDiv.innerText || cleanDiv.textContent || '';
-    
-    // Special handling for Google Docs structure: look for multiple div elements
-    // If we have multiple div elements in the original HTML, they represent verses separated by empty lines
-    const divMatches = tempDiv.innerHTML.match(/<div[^>]*>/g);
-    if (divMatches && divMatches.length > 1) {
-      console.log('Detected multiple div elements (Google Docs structure)');
-      // Split by div elements and add empty lines between them
-      const divSections = tempDiv.innerHTML.split(/<div[^>]*>/);
-      const processedSections = [];
+    if (isPlainText) {
+      // Handle plain text directly - preserve empty lines
+      console.log('Detected plain text input');
+      textContent = lyrics;
+    } else {
+      // Extract text content from HTML with proper line break handling
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = lyrics;
       
-      for (let i = 1; i < divSections.length; i++) { // Skip first empty section
-        const section = divSections[i];
-        if (section.trim()) {
-          // Convert this div section to text
-          const sectionDiv = document.createElement('div');
-          sectionDiv.innerHTML = section;
-          const sectionText = sectionDiv.innerText || sectionDiv.textContent || '';
-          if (sectionText.trim()) {
-            processedSections.push(sectionText.trim());
+      // Convert HTML elements to newlines for better parsing
+      // Replace <br> and <br/> with newlines
+      const htmlWithNewlines = tempDiv.innerHTML
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/div>/gi, '\n')
+        .replace(/<div[^>]*>/gi, '')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<p[^>]*>/gi, '')
+        .replace(/&nbsp;/gi, ' ') // Convert non-breaking spaces to regular spaces
+        .replace(/\n\s*\n/g, '\n\n'); // Normalize multiple newlines
+      
+      console.log('=== DEBUGGING PASTED LYRICS ===');
+      console.log('Original HTML:', tempDiv.innerHTML);
+      console.log('HTML with newlines:', htmlWithNewlines);
+      console.log('HTML contains <br> tags:', tempDiv.innerHTML.includes('<br'));
+      console.log('HTML contains </div> tags:', tempDiv.innerHTML.includes('</div>'));
+      console.log('HTML contains <p> tags:', tempDiv.innerHTML.includes('<p>'));
+      
+      // Create a new temp div with the converted HTML
+      const cleanDiv = document.createElement('div');
+      cleanDiv.innerHTML = htmlWithNewlines;
+      
+      // Use innerText to get the final text with proper line breaks
+      textContent = cleanDiv.innerText || cleanDiv.textContent || '';
+      
+      // Special handling for Google Docs structure: look for multiple div elements
+      // If we have multiple div elements in the original HTML, they represent verses separated by empty lines
+      const divMatches = tempDiv.innerHTML.match(/<div[^>]*>/g);
+      if (divMatches && divMatches.length > 1) {
+        console.log('Detected multiple div elements (Google Docs structure)');
+        // Split by div elements and add empty lines between them
+        const divSections = tempDiv.innerHTML.split(/<div[^>]*>/);
+        const processedSections = [];
+        
+        for (let i = 1; i < divSections.length; i++) { // Skip first empty section
+          const section = divSections[i];
+          if (section.trim()) {
+            // Convert this div section to text
+            const sectionDiv = document.createElement('div');
+            sectionDiv.innerHTML = section;
+            const sectionText = sectionDiv.innerText || sectionDiv.textContent || '';
+            if (sectionText.trim()) {
+              processedSections.push(sectionText.trim());
+            }
           }
         }
+        
+        // Join sections with double newlines (empty lines)
+        textContent = processedSections.join('\n\n');
+        console.log('Processed Google Docs structure:', textContent);
       }
-      
-      // Join sections with double newlines (empty lines)
-      textContent = processedSections.join('\n\n');
-      console.log('Processed Google Docs structure:', textContent);
     }
     
     console.log('Final text content:', textContent);

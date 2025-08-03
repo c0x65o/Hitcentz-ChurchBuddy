@@ -18,6 +18,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
   const stageRef = useRef<HTMLDivElement>(null);
   const [fontSize, setFontSize] = useState(0); // Start with 0 to prevent flash
   const [scale, setScale] = useState(1);
+  const [fontSizeCalculated, setFontSizeCalculated] = useState(false); // Track if font size has been calculated
 
   // Apply background from HTML comment
   useEffect(() => {
@@ -597,17 +598,210 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         };
         */
         
-        // Simple click handler for editing
-        const handleTextClick = (e: Event) => {
+        // Double-click handler for text editing
+        const handleDoubleClick = (e: Event) => {
+          if (!editMode) return;
+          
           e.stopPropagation();
           e.preventDefault();
-          console.log('Click detected on element:', htmlElement.tagName, 'contentEditable:', htmlElement.contentEditable);
+          console.log('Double-click detected on element:', htmlElement.tagName);
           
-          // Make text elements editable on click
+          // Make text elements editable on double-click
           if (htmlElement.tagName.match(/^H[1-6]$|^P$|^DIV$/)) {
             htmlElement.contentEditable = 'true';
             htmlElement.focus();
-            console.log('Made element editable:', htmlElement.tagName);
+            
+            // Select all text for easy editing
+            const range = document.createRange();
+            range.selectNodeContents(htmlElement);
+            const selection = window.getSelection();
+            if (selection) {
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+            
+            console.log('Made element editable on double-click:', htmlElement.tagName);
+          }
+        };
+        
+        // Simple click handler for drag selection
+        const handleTextClick = (e: Event) => {
+          if (!editMode) return;
+          
+          e.stopPropagation();
+          e.preventDefault();
+          console.log('Click detected on element:', htmlElement.tagName);
+          
+          // Select this element for toolbar editing
+          const allElements = document.querySelectorAll('[data-slide-id="modal-editor"] h1, [data-slide-id="modal-editor"] h2, [data-slide-id="modal-editor"] h3, [data-slide-id="modal-editor"] p, [data-slide-id="modal-editor"] div');
+          allElements.forEach(el => {
+            el.classList.remove('selected');
+          });
+          htmlElement.classList.add('selected');
+          
+          // Don't make editable on single click - only on double-click
+          // This allows for drag selection without accidentally entering edit mode
+        };
+        
+        // Drag functionality for edit mode
+        let isDragging = false;
+        let isResizing = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let originalLeft = 0;
+        let originalTop = 0;
+        let originalWidth = 0;
+        let originalHeight = 0;
+        let resizeHandle = '';
+        
+        const handleDragStart = (e: MouseEvent) => {
+          if (!editMode) return;
+          
+          e.stopPropagation();
+          e.preventDefault();
+          
+          console.log('Drag start on element:', htmlElement.tagName);
+          
+          // Get current computed position
+          const computedStyle = window.getComputedStyle(htmlElement);
+          originalLeft = parseFloat(computedStyle.left) || 0;
+          originalTop = parseFloat(computedStyle.top) || 0;
+          originalWidth = parseFloat(computedStyle.width) || htmlElement.offsetWidth;
+          originalHeight = parseFloat(computedStyle.height) || htmlElement.offsetHeight;
+          
+          isDragging = true;
+          dragStartX = e.clientX;
+          dragStartY = e.clientY;
+          
+          // Set cursor
+          htmlElement.style.cursor = 'grabbing';
+          
+          // Add dragging class
+          htmlElement.classList.add('dragging');
+          
+          // Prevent text selection during drag
+          document.body.style.userSelect = 'none';
+        };
+        
+        const handleDragMove = (e: MouseEvent) => {
+          if (!isDragging || !editMode) return;
+          
+          e.preventDefault();
+          
+          const deltaX = e.clientX - dragStartX;
+          const deltaY = e.clientY - dragStartY;
+          
+          if (isResizing) {
+            // Handle resize
+            const newWidth = originalWidth + deltaX;
+            const newHeight = originalHeight + deltaY;
+            
+            // Minimum size constraints
+            const minSize = 50;
+            htmlElement.style.width = `${Math.max(newWidth, minSize)}px`;
+            htmlElement.style.height = `${Math.max(newHeight, minSize)}px`;
+          } else {
+            // Handle drag
+            const newLeft = originalLeft + deltaX;
+            const newTop = originalTop + deltaY;
+            
+            htmlElement.style.left = `${newLeft}px`;
+            htmlElement.style.top = `${newTop}px`;
+            htmlElement.style.position = 'absolute';
+          }
+        };
+        
+        const handleDragEnd = () => {
+          if (!isDragging) return;
+          
+          console.log('Drag end on element:', htmlElement.tagName);
+          
+          isDragging = false;
+          isResizing = false;
+          htmlElement.style.cursor = 'grab';
+          htmlElement.classList.remove('dragging');
+          document.body.style.userSelect = '';
+          
+          // Save the new position/size
+          if (onTextEdit) {
+            const newText = htmlElement.textContent || '';
+            onTextEdit(htmlElement, newText);
+          }
+        };
+        
+        // Create resize handles
+        const createResizeHandles = () => {
+          if (!editMode) return;
+          
+          // Remove existing handles
+          const existingHandles = htmlElement.querySelectorAll('.resize-handle');
+          existingHandles.forEach(handle => handle.remove());
+          
+          // Create new handles
+          const handles = ['nw', 'ne', 'sw', 'se'];
+          handles.forEach(position => {
+            const handle = document.createElement('div');
+            handle.className = `resize-handle resize-handle-${position}`;
+            handle.dataset.position = position;
+            handle.style.cssText = `
+              position: absolute;
+              width: 6px;
+              height: 6px;
+              background: #007bff;
+              border: 1px solid rgba(255, 255, 255, 0.8);
+              border-radius: 50%;
+              cursor: ${position === 'nw' || position === 'se' ? 'nw-resize' : 'ne-resize'};
+              z-index: 1001;
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+              min-width: 6px;
+              min-height: 6px;
+              max-width: 6px;
+              max-height: 6px;
+            `;
+            
+            // Position the handle
+            switch(position) {
+              case 'nw':
+                handle.style.top = '-3px';
+                handle.style.left = '-3px';
+                break;
+              case 'ne':
+                handle.style.top = '-3px';
+                handle.style.right = '-3px';
+                break;
+              case 'sw':
+                handle.style.bottom = '-3px';
+                handle.style.left = '-3px';
+                break;
+              case 'se':
+                handle.style.bottom = '-3px';
+                handle.style.right = '-3px';
+                break;
+            }
+            
+            // Add resize event listeners
+            handle.addEventListener('mousedown', (e) => {
+              e.stopPropagation();
+              isResizing = true;
+              resizeHandle = position;
+              handleDragStart(e);
+            });
+            
+            htmlElement.appendChild(handle);
+          });
+        };
+        
+        // Show/hide resize handles based on selection
+        const updateResizeHandles = () => {
+          const handles = htmlElement.querySelectorAll('.resize-handle');
+          if (editMode) {
+            handles.forEach(handle => {
+              (handle as HTMLElement).style.display = 'block';
+            });
+          } else {
+            handles.forEach(handle => {
+              (handle as HTMLElement).style.display = 'none';
+            });
           }
         };
         
@@ -615,6 +809,11 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         const handleMouseDown = (e: Event) => {
           e.stopPropagation();
           console.log('MouseDown detected on element:', htmlElement.tagName);
+          
+          // Start drag if in edit mode
+          if (editMode && htmlElement.tagName.match(/^H[1-6]$|^P$|^DIV$/)) {
+            handleDragStart(e as MouseEvent);
+          }
         };
         
                 // Simple blur handler to save changes
@@ -666,15 +865,55 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         
         // Attach editing to the text element
         htmlElement.addEventListener('click', handleTextClick);
+        htmlElement.addEventListener('dblclick', handleDoubleClick);
         htmlElement.addEventListener('mousedown', handleMouseDown);
         htmlElement.addEventListener('blur', handleBlur);
         htmlElement.addEventListener('mouseenter', handleMouseEnter);
         htmlElement.addEventListener('mouseleave', handleMouseLeave);
         
-        // Make sure text elements are clickable
+        // Add global mouse event listeners for drag
+        const handleGlobalMouseMove = (e: MouseEvent) => {
+          if (isDragging) {
+            handleDragMove(e);
+          }
+        };
+        
+        const handleGlobalMouseUp = () => {
+          if (isDragging) {
+            handleDragEnd();
+          }
+        };
+        
+        document.addEventListener('mousemove', handleGlobalMouseMove);
+        document.addEventListener('mouseup', handleGlobalMouseUp);
+        
+        // Create resize handles for text elements
+        if (editMode && htmlElement.tagName.match(/^H[1-6]$|^P$|^DIV$/)) {
+          createResizeHandles();
+          updateResizeHandles();
+        }
+        
+        // Make sure text elements are clickable and draggable
         if (htmlElement.tagName.match(/^H[1-6]$|^P$|^DIV$/)) {
-          htmlElement.style.cursor = 'text';
+          htmlElement.style.cursor = editMode ? 'grab' : 'text';
           htmlElement.style.pointerEvents = 'auto';
+          htmlElement.style.userSelect = editMode ? 'none' : 'text';
+          
+          // Add title attribute to indicate double-click for editing
+          if (editMode) {
+            htmlElement.title = 'Double-click to edit text';
+          }
+          
+          // Add text box styling for edit mode
+          if (editMode) {
+            htmlElement.style.position = 'absolute';
+            htmlElement.style.minWidth = '100px';
+            htmlElement.style.minHeight = '30px';
+            htmlElement.style.padding = '8px';
+            htmlElement.style.border = '1px dashed #007bff';
+            htmlElement.style.backgroundColor = 'rgba(0, 123, 255, 0.1)';
+            htmlElement.style.borderRadius = '4px';
+          }
         }
         
         console.log('Attached event listeners to element:', htmlElement.tagName);
@@ -698,6 +937,11 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           htmlElement.removeEventListener('mouseenter', handleMouseEnter);
           htmlElement.removeEventListener('mouseleave', handleMouseLeave);
           htmlElement.contentEditable = 'false';
+          
+          // Remove global event listeners
+          document.removeEventListener('mousemove', handleGlobalMouseMove);
+          document.removeEventListener('mouseup', handleGlobalMouseUp);
+          
           console.log('Cleanup complete for element');
         });
       });
@@ -781,6 +1025,9 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
 
   // Calculate font size for fixed 1920x1080 stage
   useEffect(() => {
+    // Only calculate font size once when slide first loads, not during editing
+    if (fontSizeCalculated) return;
+    
     const calculateFontSize = () => {
       if (!contentRef.current) return;
 
@@ -823,8 +1070,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         return fitsWidth && fitsHeight;
       };
 
-
-
       // Binary search to find the largest font size that fits
       while (minSize <= maxSize) {
         const midSize = Math.floor((minSize + maxSize) / 2);
@@ -840,17 +1085,16 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
       // Clean up temporary element
       document.body.removeChild(tempElement);
 
-
       setFontSize(optimalSize);
+      setFontSizeCalculated(true); // Mark as calculated
     };
 
-    // Small delay to ensure DOM is ready, but much shorter than before
+    // Calculate font size when slide content changes
     const timer = setTimeout(calculateFontSize, 10);
-    
     return () => {
       clearTimeout(timer);
     };
-  }, [slide.html]);
+  }, [slide.html, fontSizeCalculated]);
 
   return (
     <div 
@@ -866,18 +1110,35 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         }}
     >
       <div className={styles.slideContent}>
-        <div 
-          ref={contentRef}
-          className={styles.slideText}
+        {/* Check if this is a video slide */}
+        {slide.html.includes('<iframe') ? (
+          <div 
+            ref={contentRef}
             data-slide-content="true"
             data-slide-id={uniqueId}
+            data-edit-mode={editMode}
+            style={{ 
+              width: '100%',
+              height: '100%',
+              position: 'relative'
+            }}
+            dangerouslySetInnerHTML={{ __html: slide.html }}
+          />
+        ) : (
+          <div 
+            ref={contentRef}
+            className={styles.slideText}
+            data-slide-content="true"
+            data-slide-id={uniqueId}
+            data-edit-mode={editMode}
             style={{ 
               fontSize: `${fontSize}px`,
               visibility: fontSize > 0 ? 'visible' : 'hidden'
             }}
-          dangerouslySetInnerHTML={{ __html: slide.html }}
-        />
-        </div>
+            dangerouslySetInnerHTML={{ __html: slide.html }}
+          />
+        )}
+      </div>
       </div>
     </div>
   );

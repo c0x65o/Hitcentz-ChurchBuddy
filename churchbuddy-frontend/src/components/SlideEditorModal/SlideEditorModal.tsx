@@ -33,7 +33,8 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     // Clean any existing handles or duplicates from the loaded HTML
     let cleanInitialHtml = slide.html;
     cleanInitialHtml = cleanInitialHtml.replace(/<div[^>]*data-handle-[^>]*>.*?<\/div>/gi, '');
-    cleanInitialHtml = cleanInitialHtml.replace(/<div[^>]*style="[^"]*position:\s*absolute[^"]*"[^>]*>.*?<\/div>/gi, '');
+    // REMOVED: Don't strip positioned elements anymore - we need to preserve drag positioning
+    // cleanInitialHtml = cleanInitialHtml.replace(/<div[^>]*style="[^"]*position:\s*absolute[^"]*"[^>]*>.*?<\/div>/gi, '');
     
     // Remove duplicate elements with the same ID from initial load
     const elementIds = new Set();
@@ -63,6 +64,15 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
       initializeElementZIndex();
     }, 100);
   }, [slide.html]);
+
+  // Initialize z-index when slide content changes
+  React.useEffect(() => {
+    if (isOpen && currentSlideHtml) {
+      setTimeout(() => {
+        initializeElementZIndex();
+      }, 200);
+    }
+  }, [currentSlideHtml, isOpen]);
 
   // Add keyboard event listener for delete functionality
   React.useEffect(() => {
@@ -239,7 +249,8 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
   const handleBoldToggle = () => {
     const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
     if (selectedElement) {
-      selectedElement.style.fontWeight = selectedElement.style.fontWeight === 'bold' ? 'normal' : 'bold';
+      const currentWeight = selectedElement.style.fontWeight || 'normal';
+      selectedElement.style.fontWeight = currentWeight === 'bold' ? 'normal' : 'bold';
       saveElementState();
     }
   };
@@ -247,9 +258,45 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
   const handleItalicToggle = () => {
     const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
     if (selectedElement) {
-      selectedElement.style.fontStyle = selectedElement.style.fontStyle === 'italic' ? 'normal' : 'italic';
+      const currentStyle = selectedElement.style.fontStyle || 'normal';
+      selectedElement.style.fontStyle = currentStyle === 'italic' ? 'normal' : 'italic';
       saveElementState();
     }
+  };
+
+  const handleRotate = () => {
+    const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
+    if (selectedElement) {
+      // Get current rotation
+      const currentTransform = selectedElement.style.transform || '';
+      const rotationMatch = currentTransform.match(/rotate\(([^)]+)deg\)/);
+      const currentRotation = rotationMatch ? parseInt(rotationMatch[1]) : 0;
+      
+      // Add 90 degrees
+      const newRotation = currentRotation + 90;
+      
+      // Apply new rotation while preserving existing transforms
+      const transformWithoutRotation = currentTransform.replace(/rotate\([^)]+deg\)/, '').trim();
+      selectedElement.style.transform = `${transformWithoutRotation} rotate(${newRotation}deg)`.trim();
+      
+      console.log(`Rotated element: ${currentRotation}° -> ${newRotation}°`);
+      saveElementState();
+    }
+  };
+
+  // Get current font properties for toolbar display
+  const getSelectedElementProperties = () => {
+    const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
+    if (selectedElement) {
+      return {
+        fontFamily: selectedElement.style.fontFamily || 'Helvetica Neue',
+        fontSize: selectedElement.style.fontSize || '24px',
+        color: selectedElement.style.color || '#ffffff',
+        fontWeight: selectedElement.style.fontWeight || 'normal',
+        fontStyle: selectedElement.style.fontStyle || 'normal'
+      };
+    }
+    return null;
   };
 
   const handleAddImage = (imageUrl: string, imageName: string) => {
@@ -454,18 +501,26 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     // Capture all current element states and save them
     const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
     if (slideContent) {
-      const textElements = slideContent.querySelectorAll('h1, h2, h3, p, div');
-      textElements.forEach((el) => {
-        const htmlEl = el as HTMLElement;
-        // Force save current state of each element
-        const currentText = htmlEl.textContent?.replace(/[⋮⠿↻🔄✋]/g, '').trim() || '';
-        handleTextEdit(htmlEl, currentText);
-      });
+      // Save the entire HTML content directly instead of trying to save individual elements
+      const cleanHtml = slideContent.innerHTML;
+      console.log('Saving complete slide HTML on close:', cleanHtml);
+      
+      // Update the state with the cleaned HTML
+      setCurrentSlideHtml(cleanHtml);
+      
+      // Save the slide
+      const updatedSlide = {
+        ...slide,
+        html: cleanHtml,
+        updatedAt: new Date()
+      };
+      onSave(updatedSlide, false);
     }
     
     // Small delay to ensure all saves complete, then close
     setTimeout(() => {
       console.log('Auto-save complete, closing modal');
+      console.log('Final slide HTML before close:', currentSlideHtml);
       onClose();
     }, 200);
   };
@@ -474,7 +529,8 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
   const getElementsInSlide = (): HTMLElement[] => {
     const container = document.querySelector('[data-slide-id="modal-editor"]');
     if (!container) return [];
-    return Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6, p, div, img, iframe')) as HTMLElement[];
+    // Include all element types including videos (iframes)
+    return Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6, p, div, img, iframe, video')) as HTMLElement[];
   };
 
   const normalizeZIndices = (elements: HTMLElement[]) => {
@@ -493,7 +549,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     console.log('=== LAYER FORWARD CLICKED ===');
     const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement | null;
     if (!selectedElement) {
-      alert('Please select an element first (click on it)');
+      console.log('No element selected for layer forward');
       return;
     }
 
@@ -505,13 +561,17 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     // Rebuild list after normalization
     const ordered = elements.sort((a, b) => parseInt(a.style.zIndex, 10) - parseInt(b.style.zIndex, 10));
     const idx = ordered.indexOf(selectedElement);
-    if (idx === -1 || idx === ordered.length - 1) return; // Already at top
+    if (idx === -1 || idx === ordered.length - 1) {
+      console.log('Element already at top layer');
+      return; // Already at top
+    }
 
     const nextEl = ordered[idx + 1];
     const zSel = selectedElement.style.zIndex;
     selectedElement.style.zIndex = nextEl.style.zIndex;
     nextEl.style.zIndex = zSel;
 
+    console.log(`Moved element forward: z-index ${zSel} -> ${nextEl.style.zIndex}`);
     saveElementState();
   };
 
@@ -519,7 +579,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     console.log('=== LAYER BACK CLICKED ===');
     const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement | null;
     if (!selectedElement) {
-      alert('Please select an element first (click on it)');
+      console.log('No element selected for layer back');
       return;
     }
 
@@ -528,13 +588,17 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     normalizeZIndices(elements);
     const ordered = elements.sort((a, b) => parseInt(a.style.zIndex, 10) - parseInt(b.style.zIndex, 10));
     const idx = ordered.indexOf(selectedElement);
-    if (idx <= 0) return; // Already at bottom
+    if (idx <= 0) {
+      console.log('Element already at bottom layer');
+      return; // Already at bottom
+    }
 
     const prevEl = ordered[idx - 1];
     const zSel = selectedElement.style.zIndex;
     selectedElement.style.zIndex = prevEl.style.zIndex;
     prevEl.style.zIndex = zSel;
 
+    console.log(`Moved element back: z-index ${zSel} -> ${prevEl.style.zIndex}`);
     saveElementState();
   };
 
@@ -589,14 +653,15 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
         console.log('=== REPLACING CURRENT SLIDE WITH VIDEO ===');
         console.log('Video ID:', videoId);
         
-        // Create video slide HTML with iframe that scales to fit - simpler structure
+        // Create video slide HTML with iframe that fills the entire slide
         const videoSlideHtml = `
-          <div style="position: relative; width: 100%; height: 100%;">
+          <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden;">
             <iframe 
-              src="https://www.youtube.com/embed/${videoId}?autoplay=0&mute=1" 
-              style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 1920px; height: 1080px; border: none; z-index: 1; pointer-events: none;"
+              src="https://www.youtube.com/embed/${videoId}?autoplay=0&mute=1&controls=1&rel=0" 
+              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; z-index: 1; pointer-events: none;"
               frameborder="0"
-              allowfullscreen>
+              allowfullscreen
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
             </iframe>
           </div>
         `;
@@ -725,33 +790,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
             >
               Video Slide
             </button>
-            <button 
-              className={styles.toolButton} 
-              title="Save Positions"
-              onClick={() => {
-                // Force save all current positions
-                const slideContent = document.querySelector('[data-slide-id="modal-editor"]');
-                if (slideContent) {
-                  const textElements = slideContent.querySelectorAll('h1, h2, h3, p, div');
-                  textElements.forEach((el) => {
-                    const htmlEl = el as HTMLElement;
-                    if (htmlEl.style.transform) {
-                      // Trigger save with current text and position (auto-save, don't close modal)
-                      handleTextEdit(htmlEl, htmlEl.textContent?.replace(/⋮⋮/g, '').trim() || '');
-                    }
-                  });
-                }
-              }}
-            >
-              Save
-            </button>
-            <button 
-              className={styles.toolButton} 
-              title="Delete Selected (or press Delete key)"
-              onClick={handleDeleteSelected}
-            >
-              Delete
-            </button>
+
             <button 
               className={styles.toolButton} 
               title="Move Layer Forward"
@@ -772,9 +811,17 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
             >
               Layer Back
             </button>
-            <button className={styles.toolButton} title="Duplicate Selected">
-              Duplicate
+            <button 
+              className={styles.toolButton} 
+              title="Rotate 90°"
+              onClick={() => {
+                console.log('Rotate button clicked!');
+                handleRotate();
+              }}
+            >
+              Rotate
             </button>
+
           </div>
         </div>
 

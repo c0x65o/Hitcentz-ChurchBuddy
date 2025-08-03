@@ -148,12 +148,25 @@ const TextEditor: React.FC<TextEditorProps> = ({
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
-    // Let the default paste happen first
+    e.preventDefault();
+    
+    // Get plain text from clipboard
+    const clipboardData = e.clipboardData;
+    const pastedText = clipboardData.getData('text/plain');
+    
+    console.log('Pasted text:', pastedText);
+    console.log('Pasted text length:', pastedText.length);
+    console.log('Pasted text contains newlines:', pastedText.includes('\n'));
+    console.log('Pasted text split by newlines:', pastedText.split('\n'));
+    
+    // Insert the plain text at cursor position
+    document.execCommand('insertText', false, pastedText);
+    
+    // Trigger save immediately after paste
     setTimeout(() => {
-      // Then trigger save immediately after paste
       if (onSave && editorRef.current) {
         const newText = editorRef.current.innerHTML || '';
-        console.log('Paste detected, triggering immediate save');
+        console.log('Paste completed, triggering immediate save');
         onSave(newText);
       }
     }, 100);

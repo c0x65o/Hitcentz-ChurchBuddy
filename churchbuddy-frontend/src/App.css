@@ -583,6 +583,7 @@
   opacity: 0;
   transition: all 0.2s ease;
   margin-left: 8px;
+  flex-shrink: 0; /* Prevent it from taking too much space */
 }
 
 .flow-item:hover .delete-flow-item {
@@ -607,6 +608,8 @@
   margin-bottom: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
+  width: 100%; /* Ensure it takes full width of its parent */
+  flex-shrink: 0; /* Prevent it from shrinking */
 }
 
 .flow-item:hover {
@@ -622,11 +625,40 @@
 }
 
 .note-flow-item {
-  background: #fff9c4;
+  background: #fff9c4 !important;
   border-color: #f57f17;
   color: #8d6e63;
   font-family: 'Comic Sans MS', cursive, sans-serif;
   box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  min-height: 40px;
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Ensure sticky notes have yellow background in presenter view too */
+.presentation-module .note-item,
+.presentation-module .note-flow-item {
+  background: #fff9c4 !important;
+  border-color: #f57f17;
+  color: #8d6e63;
+  font-family: 'Comic Sans MS', cursive, sans-serif;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  min-height: 40px;
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .note-input {
@@ -638,6 +670,17 @@
   font-family: 'Comic Sans MS', cursive, sans-serif;
   outline: none;
   padding: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  resize: none;
+  min-height: 40px;
+  line-height: 1.4;
+  flex-grow: 1; /* Allow it to grow and take available space */
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 .note-input::placeholder {
@@ -1286,6 +1329,10 @@
 
 .flow-item-title {
   flex: 1;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  min-width: 0;
 }
 
 .auto-cycle-controls {
