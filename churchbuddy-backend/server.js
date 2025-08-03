@@ -61,6 +61,16 @@ const initDatabase = () => {
         updatedAt TEXT
       )`);
 
+      // AssetDecks table
+      db.run(`CREATE TABLE IF NOT EXISTS assetDecks (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        slideIds TEXT NOT NULL DEFAULT '[]',
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+      )`);
+
       console.log('Database initialized successfully');
       resolve();
     });
@@ -290,6 +300,88 @@ app.delete('/api/slides/:id', (req, res) => {
   const { id } = req.params;
   
   db.run('DELETE FROM slides WHERE id = ?', [id], function(err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({ success: true });
+  });
+});
+
+// AssetDeck API endpoints
+
+// Get all asset decks
+app.get('/api/assetDecks', (req, res) => {
+  db.all('SELECT * FROM assetDecks ORDER BY createdAt DESC', (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json(rows.map(row => ({
+      ...row,
+      slideIds: row.slideIds ? JSON.parse(row.slideIds) : [],
+      createdAt: new Date(row.createdAt),
+      updatedAt: new Date(row.updatedAt)
+    })));
+  });
+});
+
+// Create new asset deck
+app.post('/api/assetDecks', (req, res) => {
+  const { id, title, description, slideIds } = req.body;
+  const now = new Date().toISOString();
+  
+  db.run(
+    'INSERT INTO assetDecks (id, title, description, slideIds, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, title, description || '', JSON.stringify(slideIds || []), now, now],
+    function(err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json({ 
+        id, 
+        title, 
+        description: description || '',
+        slideIds: slideIds || [],
+        createdAt: new Date(now),
+        updatedAt: new Date(now)
+      });
+    }
+  );
+});
+
+// Update asset deck
+app.put('/api/assetDecks/:id', (req, res) => {
+  const { id } = req.params;
+  const { title, description, slideIds } = req.body;
+  const now = new Date().toISOString();
+  
+  db.run(
+    'UPDATE assetDecks SET title = ?, description = ?, slideIds = ?, updatedAt = ? WHERE id = ?',
+    [title, description || '', JSON.stringify(slideIds || []), now, id],
+    function(err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json({ 
+        id, 
+        title, 
+        description: description || '',
+        slideIds: slideIds || [],
+        createdAt: new Date(now),
+        updatedAt: new Date(now)
+      });
+    }
+  );
+});
+
+// Delete asset deck
+app.delete('/api/assetDecks/:id', (req, res) => {
+  const { id } = req.params;
+  
+  db.run('DELETE FROM assetDecks WHERE id = ?', [id], function(err) {
     if (err) {
       res.status(500).json({ error: err.message });
       return;
