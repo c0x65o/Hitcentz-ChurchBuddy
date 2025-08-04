@@ -1,1 +1,3 @@
-temp-churchpres/
+node_modules/
+*.db
+package-lock.json
