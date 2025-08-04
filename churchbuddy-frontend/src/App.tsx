@@ -5,10 +5,10 @@ import SlideThumbnailList from './components/SlideThumbnailList/SlideThumbnailLi
 import SlideThumbnail from './components/SlideThumbnail/SlideThumbnail';
 import SlideGrid from './components/SlideGrid/SlideGrid';
 import Sidebar from './components/Sidebar/Sidebar';
+import SlideEditorModal from './components/SlideEditorModal/SlideEditorModal';
 import TextEditor from './components/TextEditor/TextEditor';
 import MyMediaLibrary from './components/MyMediaLibrary/MyMediaLibrary';
 import CreateItemModal from './components/CreateItemModal/CreateItemModal';
-import { SlideEditorModal } from './components/SlideEditorModal/SlideEditorModal';
 import { ISlide } from './types/ISlide';
 import { ISong } from './types/ISong';
 import { ISermon } from './types/ISermon';
@@ -23,7 +23,8 @@ function App() {
   console.log('🚀 App component rendering...');
   
   const [activeModule, setActiveModule] = useState<'presentation' | 'songs' | 'sermons' | 'asset-decks' | 'flows'>('songs');
-
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingSlide, setEditingSlide] = useState<ISlide | null>(null);
   const [songsContent, setSongsContent] = useState('');
   const [sermonsContent, setSermonsContent] = useState('');
   const [showSongTitleModal, setShowSongTitleModal] = useState(false);
@@ -62,10 +63,6 @@ function App() {
   const [flowsList, setFlowsList] = useState<IFlow[]>([]);
   const [selectedFlow, setSelectedFlow] = useState<IFlow | null>(null);
   const [showFlowTitleModal, setShowFlowTitleModal] = useState(false);
-  
-  // Slide Editor state
-  const [slideEditorModalOpen, setSlideEditorModalOpen] = useState(false);
-  const [editingSlide, setEditingSlide] = useState<ISlide | null>(null);
   
   const [currentSlide] = useState<ISlide>({
     id: '1',
@@ -135,34 +132,18 @@ function App() {
     }
   ]);
 
-
-
-  const handleDelete = (slideId: string) => {
-    console.log('Delete slide:', slideId);
-  };
-
-  // Slide Editor handlers
-  const handleEditSlide = (slideId: string) => {
-    const slide = slides.find(s => s.id === slideId);
-    if (slide) {
-      setEditingSlide(slide);
-      setSlideEditorModalOpen(true);
+  const handleEdit = (slideId: string) => {
+    console.log('Edit slide:', slideId);
+    // Find the slide to edit
+    const slideToEdit = slides.find(slide => slide.id === slideId);
+    if (slideToEdit) {
+      setEditingSlide(slideToEdit);
+      setModalOpen(true);
     }
   };
 
-  const handleSlideEditorClose = () => {
-    setSlideEditorModalOpen(false);
-    setEditingSlide(null);
-  };
-
-  const handleSlideEditorSave = (updatedSlide: ISlide) => {
-    setSlides(prevSlides =>
-      prevSlides.map(slide =>
-        slide.id === updatedSlide.id ? updatedSlide : slide
-      )
-    );
-    setSlideEditorModalOpen(false);
-    setEditingSlide(null);
+  const handleDelete = (slideId: string) => {
+    console.log('Delete slide:', slideId);
   };
 
   const handleSongsSave = (content: string) => {
@@ -735,7 +716,7 @@ function App() {
         const firstSlideId = assetDeck.slideIds[0];
         const firstSlide = slides.find(s => s.id === firstSlideId);
         if (firstSlide) {
-          // Slide editing removed - just select the asset deck
+          setEditingSlide(firstSlide);
         }
       } else {
         // If deck is empty, automatically create a new asset (like clicking "New Asset")
@@ -749,7 +730,7 @@ function App() {
         };
         
         setSlides(prev => [...prev, newSlide]);
-        // Slide editing removed - slide created but not loaded into editor
+        setEditingSlide(newSlide); // Load the new slide into the editor
         
         // Add the new slide to the selected asset deck
         const updatedAssetDeck = {
@@ -795,15 +776,28 @@ function App() {
     setAssetDecksList(prev => [...prev, newAssetDeck]);
     setSelectedAssetDeck(newAssetDeck);
     setCurrentSlideIndex(0);
-    // Slide editing removed - slide created but not loaded into editor
+    setEditingSlide(newSlide); // Load the new slide into the editor
     setShowAssetDeckTitleModal(false);
     
     console.log('Created new asset deck with initial slide:', newAssetDeck);
   };
 
   const handleAddToDeck = () => {
-    // Slide editing removed - this function is no longer needed
-    console.log('Add to deck functionality removed');
+    if (selectedAssetDeck && editingSlide) {
+      // Add the current editing slide to the selected asset deck
+      const updatedAssetDeck = {
+        ...selectedAssetDeck,
+        slideIds: [...selectedAssetDeck.slideIds, editingSlide.id],
+        updatedAt: new Date()
+      };
+      
+      setAssetDecksList(prev => prev.map(deck => 
+        deck.id === selectedAssetDeck.id ? updatedAssetDeck : deck
+      ));
+      setSelectedAssetDeck(updatedAssetDeck);
+      
+      console.log('Added slide to asset deck:', editingSlide.id);
+    }
   };
 
   const handleNewAsset = () => {
@@ -818,7 +812,7 @@ function App() {
     };
     
     setSlides(prev => [...prev, newSlide]);
-    // Slide editing removed - slide created but not loaded into editor
+    setEditingSlide(newSlide); // Load the new slide into the editor
     
     console.log('Created new asset slide:', newSlide);
   };
@@ -830,7 +824,7 @@ function App() {
       const slideId = selectedAssetDeck.slideIds[newIndex];
       const slide = slides.find(s => s.id === slideId);
       if (slide) {
-        // Slide editing removed - slide found but not loaded into editor
+        setEditingSlide(slide);
       }
     }
   };
@@ -842,7 +836,7 @@ function App() {
       const slideId = selectedAssetDeck.slideIds[newIndex];
       const slide = slides.find(s => s.id === slideId);
       if (slide) {
-        // Slide editing removed - slide found but not loaded into editor
+        setEditingSlide(slide);
       }
     }
   };
@@ -1389,7 +1383,30 @@ function App() {
     setBackgroundTargetItem(null);
   };
 
-
+  const handleSaveSlide = (updatedSlide: ISlide, shouldCloseModal = true) => {
+    console.log('Saving slide:', updatedSlide, 'shouldCloseModal:', shouldCloseModal);
+    
+    // Update the slides array
+    setSlides(prevSlides => 
+      prevSlides.map(slide => 
+        slide.id === updatedSlide.id ? updatedSlide : slide
+      )
+    );
+    
+    // Update currentSlide if it's the one being edited
+    if (currentSlide.id === updatedSlide.id) {
+      // Note: currentSlide is read-only in this demo, but in a real app you'd update it too
+    }
+    
+    // Only close modal if explicitly requested (not for auto-saves)
+    if (shouldCloseModal) {
+      console.log('Closing modal after save');
+      setModalOpen(false);
+      setEditingSlide(null);
+    } else {
+      console.log('Auto-save completed, keeping modal open');
+    }
+  };
 
   // Presentation tab state
   const [selectedPresentationFlow, setSelectedPresentationFlow] = useState<IFlow | null>(null);
@@ -1894,29 +1911,40 @@ function App() {
                 </div>
               </div>
               
-              {/* Asset Decks: Welcome Message */}
-              <div className="asset-decks-welcome">
-                <div className="welcome-content">
-                  <h2>Welcome to Asset Decks</h2>
-                  <p>Select an asset deck from the sidebar to start creating slides, or click "New Asset" to create a new slide.</p>
-                  <div className="welcome-actions">
-                    <button 
-                      className="welcome-button"
-                      onClick={handleNewAsset}
-                    >
-                      🆕 Create New Asset
-                    </button>
+              {/* Slide Editor or Welcome Message */}
+              {editingSlide ? (
+              <SlideEditorModal 
+                  key={editingSlide.id} // Force re-render when slide changes
+                  slide={editingSlide}
+                isOpen={true}
+                onClose={() => {}} // No-op since it's not a modal
+                onSave={handleSaveSlide}
+                isEmbedded={true}
+              />
+              ) : (
+                <div className="asset-decks-welcome">
+                  <div className="welcome-content">
+                    <h2>Welcome to Asset Decks</h2>
+                    <p>Select an asset deck from the sidebar to start creating slides, or click "New Asset" to create a new slide.</p>
+                    <div className="welcome-actions">
+                      <button 
+                        className="welcome-button"
+                        onClick={handleNewAsset}
+                      >
+                        🆕 Create New Asset
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </main>
           
           {/* SlideThumbnailList as popout overlay */}
           <SlideThumbnailList
             slides={slides.filter(slide => selectedAssetDeck?.slideIds.includes(slide.id) || !selectedAssetDeck)}
+            onEdit={handleEdit}
             onDelete={handleDelete}
-            onEdit={handleEditSlide}
             title={selectedAssetDeck?.title || "Asset Deck Slides"}
           />
         </>
@@ -1948,7 +1976,7 @@ function App() {
           {/* SlideThumbnailList as popout overlay for Songs */}
           <SlideThumbnailList
             slides={slides.filter(slide => selectedSong?.slideIds.includes(slide.id) || !selectedSong)}
-            onEdit={handleEditSlide}
+            onEdit={handleEdit}
             title={selectedSong?.title || "Songs"}
           />
         </>
@@ -2389,8 +2417,8 @@ function App() {
               }
               return slides;
             })()}
+            onEdit={handleEdit}
             onDelete={handleDelete}
-            onEdit={handleEditSlide}
             title={selectedFlowCollection ? (() => {
               const song = songsList.find(s => s.id === selectedFlowCollection.id);
               const sermon = sermonsList.find(s => s.id === selectedFlowCollection.id);
@@ -2443,8 +2471,8 @@ function App() {
           {/* SlideThumbnailList as popout overlay for Sermons */}
           <SlideThumbnailList
             slides={slides.filter(slide => selectedSermon?.slideIds.includes(slide.id) || !selectedSermon)}
+            onEdit={handleEdit}
             onSlideClick={isPreachMode ? handleSlideActivation : undefined}
-            onEdit={handleEditSlide}
             title={selectedSermon?.title || "Sermons"}
           />
         </>
@@ -2464,15 +2492,24 @@ function App() {
             {/* Fixed Slide Thumbnails */}
             <SlideThumbnailList
               slides={slides}
+              onEdit={handleEdit}
               onDelete={handleDelete}
-              onEdit={handleEditSlide}
               title="Slides"
             />
           </main>
         </>
       )}
 
-
+      {/* Test Modal */}
+      <SlideEditorModal 
+        slide={editingSlide || currentSlide}
+        isOpen={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingSlide(null);
+        }}
+        onSave={handleSaveSlide}
+      />
 
       {/* Create Item Modal */}
       <CreateItemModal
@@ -2824,6 +2861,8 @@ function App() {
                 <div className="active-slide-content">
                   <SlideRenderer
                     slide={getActiveSlide()!}
+                    editMode={false}
+                    onTextEdit={() => {}} // No editing in presentation mode
                     isActive={true} // Enable video playback for active slide
                   />
                 </div>
@@ -2848,14 +2887,6 @@ function App() {
           </div>
         </div>
       )}
-
-      {/* Slide Editor Modal */}
-      <SlideEditorModal
-        isOpen={slideEditorModalOpen}
-        slide={editingSlide}
-        onClose={handleSlideEditorClose}
-        onSave={handleSlideEditorSave}
-      />
 
       {/* Bulletin Overlay */}
       <BulletinOverlay
