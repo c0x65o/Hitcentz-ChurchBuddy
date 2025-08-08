@@ -7,12 +7,14 @@ interface SlideGridProps {
   slides: ISlide[];
   onSlideClick?: (slide: ISlide) => void;
   className?: string;
+  activeSlideId?: string;
 }
 
 const SlideGrid: React.FC<SlideGridProps> = ({ 
   slides, 
   onSlideClick,
-  className = ''
+  className = '',
+  activeSlideId
 }) => {
   console.log('SlideGrid received slides:', slides);
   console.log('SlideGrid slides length:', slides?.length);
@@ -26,7 +28,7 @@ const SlideGrid: React.FC<SlideGridProps> = ({
     <div className={`${styles.slideGrid} ${className}`}>
       {slides.map((slide) => {
         console.log('Rendering slide:', slide);
-        const isActive = slide.html.includes('data-active="true"') || slide.html.includes('class="active"');
+        const isActive = activeSlideId === slide.id;
         return (
           <div 
             key={slide.id} 
@@ -41,6 +43,7 @@ const SlideGrid: React.FC<SlideGridProps> = ({
                 slide={slide}
                 disableScaling={true}
                 isActive={false}
+                activeSlideId={activeSlideId}
               />
             </div>
           </div>

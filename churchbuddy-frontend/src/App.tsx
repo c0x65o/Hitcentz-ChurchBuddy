@@ -63,6 +63,7 @@ function App() {
   const [flowsList, setFlowsList] = useState<IFlow[]>([]);
   const [selectedFlow, setSelectedFlow] = useState<IFlow | null>(null);
   const [showFlowTitleModal, setShowFlowTitleModal] = useState(false);
+  const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null);
   
   const [currentSlide] = useState<ISlide>({
     id: '1',
@@ -142,8 +143,44 @@ function App() {
     }
   };
 
-  const handleDelete = (slideId: string) => {
+  const handleDelete = async (slideId: string) => {
     console.log('Delete slide:', slideId);
+    
+    try {
+      // Delete from backend
+      if (backendConnected) {
+        const response = await fetch(`http://localhost:5001/api/slides/${slideId}`, {
+          method: 'DELETE',
+        });
+        
+        if (!response.ok) {
+          console.error('Failed to delete slide from backend:', response.statusText);
+        }
+      }
+      
+      // Remove from local state
+      setSlides(prev => prev.filter(slide => slide.id !== slideId));
+      
+      // Remove from collections that reference this slide
+      setSongsList(prev => prev.map(song => ({
+        ...song,
+        slideIds: song.slideIds.filter(id => id !== slideId)
+      })));
+      
+      setSermonsList(prev => prev.map(sermon => ({
+        ...sermon,
+        slideIds: sermon.slideIds.filter(id => id !== slideId)
+      })));
+      
+      setAssetDecksList(prev => prev.map(deck => ({
+        ...deck,
+        slideIds: deck.slideIds.filter(id => id !== slideId)
+      })));
+      
+      console.log('Slide deleted successfully');
+    } catch (error) {
+      console.error('Error deleting slide:', error);
+    }
   };
 
   const handleSongsSave = (content: string) => {
@@ -184,61 +221,35 @@ function App() {
       console.log('Detected plain text input');
       textContent = lyrics;
     } else {
-      // Extract text content from HTML with proper line break handling
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = lyrics;
-      
-      // Convert HTML elements to newlines for better parsing
-      // Replace <br> and <br/> with newlines
-      const htmlWithNewlines = tempDiv.innerHTML
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/div>/gi, '\n')
-        .replace(/<div[^>]*>/gi, '')
-        .replace(/<\/p>/gi, '\n')
-        .replace(/<p[^>]*>/gi, '')
-        .replace(/&nbsp;/gi, ' ') // Convert non-breaking spaces to regular spaces
-        .replace(/\n\s*\n/g, '\n\n'); // Normalize multiple newlines
-      
+    // Extract text content from HTML with proper line break handling
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = lyrics;
+    
       console.log('=== DEBUGGING PASTED LYRICS ===');
       console.log('Original HTML:', tempDiv.innerHTML);
-      console.log('HTML with newlines:', htmlWithNewlines);
-      console.log('HTML contains <br> tags:', tempDiv.innerHTML.includes('<br'));
-      console.log('HTML contains </div> tags:', tempDiv.innerHTML.includes('</div>'));
-      console.log('HTML contains <p> tags:', tempDiv.innerHTML.includes('<p>'));
       
-      // Create a new temp div with the converted HTML
-      const cleanDiv = document.createElement('div');
-      cleanDiv.innerHTML = htmlWithNewlines;
-      
-      // Use innerText to get the final text with proper line breaks
+      // First, handle consecutive <br> tags that represent empty lines
+      // Replace consecutive <br> tags with double newlines to preserve empty lines
+      let processedHtml = tempDiv.innerHTML
+        .replace(/<br\s*\/?>\s*<br\s*\/?>/gi, '\n\n') // Consecutive <br> tags become double newlines
+        .replace(/<br\s*\/?>/gi, '\n') // Single <br> tags become single newlines
+      .replace(/<\/div>/gi, '\n')
+      .replace(/<div[^>]*>/gi, '')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<p[^>]*>/gi, '')
+      .replace(/&nbsp;/gi, ' ') // Convert non-breaking spaces to regular spaces
+      .replace(/\n\s*\n/g, '\n\n'); // Normalize multiple newlines
+    
+      console.log('Processed HTML:', processedHtml);
+    
+    // Create a new temp div with the converted HTML
+    const cleanDiv = document.createElement('div');
+      cleanDiv.innerHTML = processedHtml;
+    
+    // Use innerText to get the final text with proper line breaks
       textContent = cleanDiv.innerText || cleanDiv.textContent || '';
       
-      // Special handling for Google Docs structure: look for multiple div elements
-      // If we have multiple div elements in the original HTML, they represent verses separated by empty lines
-      const divMatches = tempDiv.innerHTML.match(/<div[^>]*>/g);
-      if (divMatches && divMatches.length > 1) {
-        console.log('Detected multiple div elements (Google Docs structure)');
-        // Split by div elements and add empty lines between them
-        const divSections = tempDiv.innerHTML.split(/<div[^>]*>/);
-        const processedSections = [];
-        
-        for (let i = 1; i < divSections.length; i++) { // Skip first empty section
-          const section = divSections[i];
-          if (section.trim()) {
-            // Convert this div section to text
-            const sectionDiv = document.createElement('div');
-            sectionDiv.innerHTML = section;
-            const sectionText = sectionDiv.innerText || sectionDiv.textContent || '';
-            if (sectionText.trim()) {
-              processedSections.push(sectionText.trim());
-            }
-          }
-        }
-        
-        // Join sections with double newlines (empty lines)
-        textContent = processedSections.join('\n\n');
-        console.log('Processed Google Docs structure:', textContent);
-      }
+      console.log('Final text content:', textContent);
     }
     
     console.log('Final text content:', textContent);
@@ -752,11 +763,11 @@ function App() {
   };
 
   const handleCreateAssetDeck = (title: string) => {
-    // Create a new blank slide first
+    // Create a new blank slide first with proper div wrapper for activation
     const newSlide: ISlide = {
       id: `slide-${Date.now()}`,
       title: 'New Asset',
-      html: '<h1>New Asset</h1>',
+      html: '<div style="text-align: center; padding: 40px; color: white; font-weight: bold; line-height: 1.4;"><h1>New Asset</h1></div>',
       order: slides.length + 1,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -784,28 +795,35 @@ function App() {
 
   const handleAddToDeck = () => {
     if (selectedAssetDeck && editingSlide) {
-      // Add the current editing slide to the selected asset deck
-      const updatedAssetDeck = {
-        ...selectedAssetDeck,
-        slideIds: [...selectedAssetDeck.slideIds, editingSlide.id],
-        updatedAt: new Date()
-      };
+      // Check if the slide is already in the deck
+      const isSlideAlreadyInDeck = selectedAssetDeck.slideIds.includes(editingSlide.id);
       
-      setAssetDecksList(prev => prev.map(deck => 
-        deck.id === selectedAssetDeck.id ? updatedAssetDeck : deck
-      ));
-      setSelectedAssetDeck(updatedAssetDeck);
-      
-      console.log('Added slide to asset deck:', editingSlide.id);
+      if (!isSlideAlreadyInDeck) {
+        // Only add the slide if it's not already in the deck
+        const updatedAssetDeck = {
+          ...selectedAssetDeck,
+          slideIds: [...selectedAssetDeck.slideIds, editingSlide.id],
+          updatedAt: new Date()
+        };
+        
+        setAssetDecksList(prev => prev.map(deck => 
+          deck.id === selectedAssetDeck.id ? updatedAssetDeck : deck
+        ));
+        setSelectedAssetDeck(updatedAssetDeck);
+        
+        console.log('Added slide to asset deck:', editingSlide.id);
+      } else {
+        console.log('Slide already in asset deck:', editingSlide.id);
+      }
     }
   };
 
   const handleNewAsset = () => {
-    // Create a new blank slide
+    // Create a new blank slide with proper div wrapper for activation
     const newSlide: ISlide = {
       id: `slide-${Date.now()}`,
       title: 'New Asset',
-      html: '<h1>New Asset</h1>',
+      html: '', // Completely empty HTML for a truly blank slide
       order: slides.length + 1,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -858,9 +876,7 @@ function App() {
     const newFlow: IFlow = {
       id: `flow-${Date.now()}`,
       title,
-      listOfLists: [],
-      listOfNotes: [],
-      listOfNotePosition: [],
+      flowItems: [], // Start with empty flow
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -874,9 +890,25 @@ function App() {
 
   const handleAddCollectionToFlow = (collectionId: string, collectionType: 'song' | 'sermon' | 'asset-deck') => {
     if (selectedFlow) {
+      // Find the collection title
+      const song = songsList.find(s => s.id === collectionId);
+      const sermon = sermonsList.find(s => s.id === collectionId);
+      const assetDeck = assetDecksList.find(a => a.id === collectionId);
+      
+      const collection = song || sermon || assetDeck;
+      if (!collection) return;
+      
+      const newOrder = selectedFlow.flowItems.length;
+      const newItem = {
+        type: 'collection' as const,
+        id: collectionId,
+        title: collection.title,
+        order: newOrder
+      };
+      
       const updatedFlow = {
         ...selectedFlow,
-        listOfLists: [...selectedFlow.listOfLists, collectionId],
+        flowItems: [...selectedFlow.flowItems, newItem],
         updatedAt: new Date()
       };
       
@@ -889,12 +921,20 @@ function App() {
     }
   };
 
-  const handleAddNoteToFlow = (note: string, position: number) => {
+  const handleAddNoteToFlow = (note: string) => {
     if (selectedFlow) {
+      const newOrder = selectedFlow.flowItems.length;
+      const newItem = {
+        type: 'note' as const,
+        id: `note-${Date.now()}`,
+        title: note,
+        note: note,
+        order: newOrder
+      };
+      
       const updatedFlow = {
         ...selectedFlow,
-        listOfNotes: [...selectedFlow.listOfNotes, note],
-        listOfNotePosition: [...selectedFlow.listOfNotePosition, position],
+        flowItems: [...selectedFlow.flowItems, newItem],
         updatedAt: new Date()
       };
       
@@ -903,62 +943,38 @@ function App() {
       ));
       setSelectedFlow(updatedFlow);
       
-      console.log('Added note to flow:', note, 'at position:', position);
+      console.log('Added note to flow:', note);
     }
+  };
+
+  const handleEditNote = (index: number, newNote: string) => {
+    if (!selectedFlow) return;
+    
+    const updatedFlowItems = [...selectedFlow.flowItems];
+    updatedFlowItems[index] = {
+      ...updatedFlowItems[index],
+      note: newNote
+    };
+    
+    const updatedFlow = {
+      ...selectedFlow,
+      flowItems: updatedFlowItems,
+      updatedAt: new Date()
+    };
+    
+    setFlowsList(prev => prev.map(flow => 
+      flow.id === selectedFlow.id ? updatedFlow : flow
+    ));
+    setSelectedFlow(updatedFlow);
+    setEditingNoteIndex(null);
   };
 
   const handlePrintFlow = () => {
     if (selectedFlow) {
       console.log('Printing flow:', selectedFlow.title);
       
-      // Create a unified array of flow items (collections and notes mixed)
-      const flowItems: Array<{type: 'collection' | 'note', id: string, title: string, note?: string, position?: number}> = [];
-      
-      // Add collections to the unified array
-      selectedFlow.listOfLists.forEach((collectionId, index) => {
-        const song = songsList.find(s => s.id === collectionId);
-        const sermon = sermonsList.find(s => s.id === collectionId);
-        const assetDeck = assetDecksList.find(a => a.id === collectionId);
-        
-        const collection = song || sermon || assetDeck;
-        if (collection) {
-          flowItems.push({
-            type: 'collection',
-            id: collectionId,
-            title: collection.title
-          });
-        }
-      });
-      
-      // Add notes to the unified array at their specified positions
-      selectedFlow.listOfNotes.forEach((note, noteIndex) => {
-        const position = selectedFlow.listOfNotePosition[noteIndex];
-        flowItems.splice(position, 0, {
-          type: 'note',
-          id: `note-${noteIndex}`,
-          title: note,
-          note: note,
-          position: position
-        });
-      });
-      
-      // Sort the unified array by actual position in the flow
-      flowItems.sort((a, b) => {
-        if (a.type === 'collection' && b.type === 'collection') {
-          return selectedFlow.listOfLists.indexOf(a.id) - selectedFlow.listOfLists.indexOf(b.id);
-        }
-        if (a.type === 'note' && b.type === 'note') {
-          return (a.position || 0) - (b.position || 0);
-        }
-        // Notes should be positioned relative to collections
-        if (a.type === 'note') {
-          return (a.position || 0) - selectedFlow.listOfLists.indexOf(b.id);
-        }
-        if (b.type === 'note') {
-          return selectedFlow.listOfLists.indexOf(a.id) - (b.position || 0);
-        }
-        return 0;
-      });
+      // Get flow items in user-created order
+      const flowItems = selectedFlow.flowItems.sort((a, b) => a.order - b.order);
       
       // Generate HTML for printing
       const printHTML = `
@@ -1053,78 +1069,22 @@ function App() {
   const handleReorderFlowItems = (fromIndex: number, toIndex: number, fromType: 'collection' | 'note') => {
     if (!selectedFlow) return;
     
-    // Create a unified array of flow items (collections and notes mixed)
-    const flowItems: Array<{type: 'collection' | 'note', id: string, title: string, note?: string, position?: number}> = [];
+    // Get the sorted flow items by order
+    const sortedItems = [...selectedFlow.flowItems].sort((a, b) => a.order - b.order);
     
-    // Add collections to the unified array
-    selectedFlow.listOfLists.forEach((collectionId, index) => {
-      const song = songsList.find(s => s.id === collectionId);
-      const sermon = sermonsList.find(s => s.id === collectionId);
-      const assetDeck = assetDecksList.find(a => a.id === collectionId);
-      
-      const collection = song || sermon || assetDeck;
-      if (collection) {
-        flowItems.push({
-          type: 'collection',
-          id: collectionId,
-          title: collection.title
-        });
-      }
-    });
+    // Move the item from fromIndex to toIndex
+    const [movedItem] = sortedItems.splice(fromIndex, 1);
+    sortedItems.splice(toIndex, 0, movedItem);
     
-    // Add notes to the unified array at their specified positions
-    selectedFlow.listOfNotes.forEach((note, noteIndex) => {
-      const position = selectedFlow.listOfNotePosition[noteIndex];
-      flowItems.splice(position, 0, {
-        type: 'note',
-        id: `note-${noteIndex}`,
-        title: note,
-        note: note,
-        position: position
-      });
-    });
-    
-    // Sort the unified array by actual position in the flow
-    flowItems.sort((a, b) => {
-      if (a.type === 'collection' && b.type === 'collection') {
-        return selectedFlow.listOfLists.indexOf(a.id) - selectedFlow.listOfLists.indexOf(b.id);
-      }
-      if (a.type === 'note' && b.type === 'note') {
-        return (a.position || 0) - (b.position || 0);
-      }
-      // Notes should be positioned relative to collections
-      if (a.type === 'note') {
-        return (a.position || 0) - selectedFlow.listOfLists.indexOf(b.id);
-      }
-      if (b.type === 'note') {
-        return selectedFlow.listOfLists.indexOf(a.id) - (b.position || 0);
-      }
-      return 0;
-    });
-    
-    // Move the item in the unified array
-    const itemToMove = flowItems.splice(fromIndex, 1)[0];
-    flowItems.splice(toIndex, 0, itemToMove);
-    
-    // Reconstruct the separate arrays from the unified array
-    const newListOfLists: string[] = [];
-    const newListOfNotes: string[] = [];
-    const newListOfNotePosition: number[] = [];
-    
-    flowItems.forEach((item, index) => {
-      if (item.type === 'collection') {
-        newListOfLists.push(item.id);
-      } else if (item.type === 'note') {
-        newListOfNotes.push(item.note || '');
-        newListOfNotePosition.push(index);
-    }
-    });
+    // Update the order numbers to reflect the new positions
+    const updatedFlowItems = sortedItems.map((item, index) => ({
+      ...item,
+      order: index
+    }));
     
     const updatedFlow = {
       ...selectedFlow,
-      listOfLists: newListOfLists,
-      listOfNotes: newListOfNotes,
-      listOfNotePosition: newListOfNotePosition,
+      flowItems: updatedFlowItems,
       updatedAt: new Date()
     };
     
@@ -1132,6 +1092,8 @@ function App() {
       flow.id === selectedFlow.id ? updatedFlow : flow
     ));
     setSelectedFlow(updatedFlow);
+    
+    console.log('Reordered flow items:', { fromIndex, toIndex, fromType });
   };
 
   const [draggedItem, setDraggedItem] = useState<{type: 'collection' | 'note', index: number} | null>(null);
@@ -1232,6 +1194,13 @@ function App() {
       if (selectedSermon?.title === itemTitle) {
         setSelectedSermon(null);
         setSermonsContent('');
+      }
+    } else if (activeModule === 'asset-decks') {
+      setAssetDecksList(prev => prev.filter(deck => deck.title !== itemTitle));
+      if (selectedAssetDeck?.title === itemTitle) {
+        setSelectedAssetDeck(null);
+        setEditingSlide(null);
+        setCurrentSlideIndex(0);
       }
     }
     // Remove from backgrounds list if it was there
@@ -1429,64 +1398,19 @@ function App() {
     console.warn('Selected slide:', slide);
     console.warn('Selected slide ID:', slide.id);
     console.warn('Selected slide title:', slide.title);
-    console.warn('Selected slide HTML length:', slide.html.length);
-    console.warn('Selected slide HTML preview:', slide.html.substring(0, 200));
     console.warn('Current isPreachMode:', isPreachMode);
     console.warn('Current activeModule:', activeModule);
     
-    // Remove active variable from all slides
-    const updatedSlides = slides.map(s => ({
-      ...s,
-      html: s.html.replace(/ data-active="true"/g, '').replace(/ class="[^"]*active[^"]*"/g, (match) => {
-        return match.replace(/active/g, '').replace(/\s+/g, ' ').trim();
-      })
-    }));
-    
-    // Add active variable to the selected slide
-    const slideToActivate = updatedSlides.find(s => s.id === slide.id);
-    if (slideToActivate) {
-      console.warn('Found slide to activate:', slideToActivate.id);
-      console.warn('Original HTML:', slideToActivate.html);
-      
-      // Preserve any background comments and only add active attributes to the main container
-      const backgroundMatch = slideToActivate.html.match(/<!--BACKGROUND:.*?-->/);
-      const backgroundComment = backgroundMatch ? backgroundMatch[0] : '';
-      const htmlWithoutBackground = slideToActivate.html.replace(/<!--BACKGROUND:.*?-->/g, '');
-      
-      // Add active attributes to the first div or main container
-      const updatedHtml = htmlWithoutBackground.replace(/<div([^>]*)>/i, (match, attributes) => {
-        console.warn('Replacing div with attributes:', attributes);
-        if (attributes.includes('class=')) {
-          return `<div${attributes} data-active="true">`;
-        } else {
-          return `<div${attributes} class="active" data-active="true">`;
-        }
-      });
-      
-      // Restore background comment if it existed
-      slideToActivate.html = backgroundComment + updatedHtml;
-      console.warn('Updated HTML:', slideToActivate.html);
-    } else {
-      console.warn('❌ SLIDE NOT FOUND IN UPDATED SLIDES ARRAY!');
-      console.warn('Available slide IDs:', updatedSlides.map(s => s.id));
-    }
-    
-    // Update slides state
-    setSlides(updatedSlides);
+    // Simply set the active slide without modifying HTML
     setActiveSlide(slide);
     
-    // Debug output
     console.warn('🚨 ACTIVE SLIDE SET TO:', slide.id);
     console.warn('🚨 ACTIVE SLIDE TITLE:', slide.title);
-    console.warn('🚨 ACTIVE SLIDE HTML:', slideToActivate?.html);
-    console.warn('🚨 UPDATED SLIDES COUNT:', updatedSlides.length);
   };
 
   // Function to find the currently active slide
   const getActiveSlide = () => {
-    return slides.find(slide => 
-      slide.html.includes('data-active="true"') || slide.html.includes('class="active"')
-    ) || null;
+    return activeSlide || null;
   };
 
   // Keyboard navigation for Presentation tab
@@ -1498,20 +1422,24 @@ function App() {
     
     // Get all slides from the current flow
     const allFlowSlides: ISlide[] = [];
-    selectedPresentationFlow.listOfLists.forEach((collectionId, index) => {
-      const song = songsList.find(s => s.id === collectionId);
-      const sermon = sermonsList.find(s => s.id === collectionId);
-      const assetDeck = assetDecksList.find(a => a.id === collectionId);
-      
-      if (song) {
-        const songSlides = slides.filter(slide => song.slideIds.includes(slide.id));
-        allFlowSlides.push(...songSlides);
-      } else if (sermon) {
-        const sermonSlides = slides.filter(slide => sermon.slideIds.includes(slide.id));
-        allFlowSlides.push(...sermonSlides);
-      } else if (assetDeck) {
-        const assetSlides = slides.filter(slide => assetDeck.slideIds.includes(slide.id));
-        allFlowSlides.push(...assetSlides);
+    const sortedFlowItems = selectedPresentationFlow.flowItems.sort((a, b) => a.order - b.order);
+    
+    sortedFlowItems.forEach((item) => {
+      if (item.type === 'collection') {
+        const song = songsList.find(s => s.id === item.id);
+        const sermon = sermonsList.find(s => s.id === item.id);
+        const assetDeck = assetDecksList.find(a => a.id === item.id);
+        
+        if (song) {
+          const songSlides = slides.filter(slide => song.slideIds.includes(slide.id));
+          allFlowSlides.push(...songSlides);
+        } else if (sermon) {
+          const sermonSlides = slides.filter(slide => sermon.slideIds.includes(slide.id));
+          allFlowSlides.push(...sermonSlides);
+        } else if (assetDeck) {
+          const assetSlides = slides.filter(slide => assetDeck.slideIds.includes(slide.id));
+          allFlowSlides.push(...assetSlides);
+        }
       }
     });
     
@@ -1877,14 +1805,14 @@ function App() {
                     title="Add current slide to selected asset deck"
                     disabled={!selectedAssetDeck}
                   >
-                    ➕ Add to Deck
+                    Save
                   </button>
                   <button 
                     className="toolbar-button"
                     onClick={handleNewAsset}
                     title="Create a new blank slide"
                   >
-                    🆕 New Asset
+                    New Slide
                   </button>
                 </div>
                 
@@ -1895,7 +1823,7 @@ function App() {
                     title="Previous slide"
                     disabled={!selectedAssetDeck || currentSlideIndex === 0}
                   >
-                    ⬆️ Previous
+                    Previous
                   </button>
                   <span className="slide-counter">
                     {selectedAssetDeck ? `${currentSlideIndex + 1} / ${selectedAssetDeck.slideIds.length}` : '0 / 0'}
@@ -1906,7 +1834,7 @@ function App() {
                     title="Next slide"
                     disabled={!selectedAssetDeck || currentSlideIndex >= (selectedAssetDeck?.slideIds.length || 0) - 1}
                   >
-                    Next ⬇️
+                    Next
                   </button>
                 </div>
               </div>
@@ -1922,20 +1850,20 @@ function App() {
                 isEmbedded={true}
               />
               ) : (
-                <div className="asset-decks-welcome">
-                  <div className="welcome-content">
-                    <h2>Welcome to Asset Decks</h2>
-                    <p>Select an asset deck from the sidebar to start creating slides, or click "New Asset" to create a new slide.</p>
-                    <div className="welcome-actions">
-                      <button 
-                        className="welcome-button"
-                        onClick={handleNewAsset}
-                      >
-                        🆕 Create New Asset
-                      </button>
-                    </div>
+              <div className="asset-decks-welcome">
+                <div className="welcome-content">
+                  <h2>Welcome to Asset Decks</h2>
+                  <p>Select an asset deck from the sidebar to start creating slides, or click "New Slide" to create a new slide.</p>
+                  <div className="welcome-actions">
+                    <button 
+                      className="welcome-button"
+                      onClick={handleNewAsset}
+                    >
+                      Create New Slide
+                    </button>
                   </div>
                 </div>
+              </div>
               )}
             </div>
           </main>
@@ -1946,6 +1874,7 @@ function App() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             title={selectedAssetDeck?.title || "Asset Deck Slides"}
+            hideEditButton={true}
           />
         </>
       ) : activeModule === 'songs' ? (
@@ -2131,7 +2060,7 @@ function App() {
                                 // Only handle external drops (from source columns), ignore internal reordering
                                 if (!data.isInternal && (data.type === 'song' || data.type === 'sermon' || data.type === 'asset-deck' || data.type === 'note')) {
                                   if (data.type === 'note') {
-                                    handleAddNoteToFlow('Click to type', selectedFlow?.listOfLists.length || 0);
+                                    handleAddNoteToFlow('Click to type');
                                   } else {
                                     handleAddCollectionToFlow(data.id, data.type);
                                   }
@@ -2149,80 +2078,26 @@ function App() {
                               e.currentTarget.classList.remove('drag-over');
                             }}
                           >
-                            {selectedFlow.listOfLists.length > 0 || selectedFlow.listOfNotes.length > 0 ? (
+                            {selectedFlow.flowItems.length > 0 ? (
                               <>
-                                {/* Unified Flow Items (Collections and Notes mixed) */}
-                                {(() => {
-                                  // Create a unified array of flow items
-                                  const flowItems: Array<{type: 'collection' | 'note', id: string, title: string, note?: string, position?: number, originalIndex: number}> = [];
-                                  
-                                  // Add collections to the unified array
-                                  selectedFlow.listOfLists.forEach((collectionId, index) => {
-                                  const song = songsList.find(s => s.id === collectionId);
-                                  const sermon = sermonsList.find(s => s.id === collectionId);
-                                  const assetDeck = assetDecksList.find(a => a.id === collectionId);
-                                    
-                                    const collection = song || sermon || assetDeck;
-                                    if (collection) {
-                                      flowItems.push({
-                                        type: 'collection',
-                                        id: collectionId,
-                                        title: collection.title,
-                                        originalIndex: index
-                                      });
-                                    }
-                                  });
-                                  
-                                  // Add notes to the unified array at their specified positions
-                                  selectedFlow.listOfNotes.forEach((note, noteIndex) => {
-                                    const position = selectedFlow.listOfNotePosition[noteIndex];
-                                    flowItems.splice(position, 0, {
-                                      type: 'note',
-                                      id: `note-${noteIndex}`,
-                                      title: note,
-                                      note: note,
-                                      position: position,
-                                      originalIndex: noteIndex
-                                    });
-                                  });
-                                  
-                                  // Sort the unified array by actual position in the flow
-                                  flowItems.sort((a, b) => {
-                                    if (a.type === 'collection' && b.type === 'collection') {
-                                      return selectedFlow.listOfLists.indexOf(a.id) - selectedFlow.listOfLists.indexOf(b.id);
-                                    }
-                                    if (a.type === 'note' && b.type === 'note') {
-                                      return (a.position || 0) - (b.position || 0);
-                                    }
-                                    // Notes should be positioned relative to collections
-                                    if (a.type === 'note') {
-                                      return (a.position || 0) - selectedFlow.listOfLists.indexOf(b.id);
-                                    }
-                                    if (b.type === 'note') {
-                                      return selectedFlow.listOfLists.indexOf(a.id) - (b.position || 0);
-                                    }
-                                    return 0;
-                                  });
-                                  
-                                  return flowItems.map((item, unifiedIndex) => {
+                                {/* Display flow items in user-created order */}
+                                {selectedFlow.flowItems
+                                  .sort((a, b) => a.order - b.order) // Sort by user order
+                                  .map((item, index) => {
                                     if (item.type === 'collection') {
                                       const song = songsList.find(s => s.id === item.id);
                                       const sermon = sermonsList.find(s => s.id === item.id);
                                       const assetDeck = assetDecksList.find(a => a.id === item.id);
-                                  
-                                  const collection = song || sermon || assetDeck;
-                                  const icon = song ? '🎵' : sermon ? '📖' : assetDeck ? '📚' : '📄';
-                                  
-                                  return (
-                                    <div 
-                                          key={`collection-${item.originalIndex}`} 
-                                          className={`flow-item draggable-flow-item ${draggedItem?.type === 'collection' && draggedItem?.index === unifiedIndex ? 'dragging' : ''} ${selectedFlowCollection?.id === item.id ? 'selected' : ''}`}
-                                      draggable
+                                      
+                                      const collection = song || sermon || assetDeck;
+                                      const icon = song ? '🎵' : sermon ? '📖' : assetDeck ? '📚' : '📄';
+                                      
+                                      return (
+                                        <div 
+                                          key={`collection-${item.id}`} 
+                                          className={`flow-item draggable-flow-item ${selectedFlowCollection?.id === item.id ? 'selected' : ''}`}
+                                          draggable
                                           onClick={() => {
-                                            const song = songsList.find(s => s.id === item.id);
-                                            const sermon = sermonsList.find(s => s.id === item.id);
-                                            const assetDeck = assetDecksList.find(a => a.id === item.id);
-                                            
                                             if (song) {
                                               handleFlowCollectionClick(item.id, 'song');
                                             } else if (sermon) {
@@ -2231,143 +2106,154 @@ function App() {
                                               handleFlowCollectionClick(item.id, 'asset-deck');
                                             }
                                           }}
-                                      onDragStart={(e) => {
-                                            setDraggedItem({ type: 'collection', index: unifiedIndex });
-                                        e.dataTransfer.setData('text/plain', JSON.stringify({
-                                          type: 'collection',
-                                              index: unifiedIndex,
+                                          onDragStart={(e) => {
+                                            e.dataTransfer.setData('text/plain', JSON.stringify({
+                                              type: 'collection',
+                                              index: index,
                                               collectionId: item.id,
-                                          isInternal: true
-                                        }));
-                                      }}
-                                      onDragEnd={() => {
-                                        setDraggedItem(null);
-                                      }}
-                                      onDragOver={(e) => {
-                                        e.preventDefault();
-                                        e.currentTarget.classList.add('drag-over');
-                                      }}
-                                      onDragLeave={(e) => {
-                                        e.currentTarget.classList.remove('drag-over');
-                                      }}
-                                      onDrop={(e) => {
-                                        e.preventDefault();
-                                        e.currentTarget.classList.remove('drag-over');
-                                        try {
-                                          const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-                                          if (data.isInternal && (data.type === 'collection' || data.type === 'note')) {
-                                                handleReorderFlowItems(data.index, unifiedIndex, data.type);
-                                          }
-                                        } catch (error) {
-                                          console.error('Error reordering flow items:', error);
-                                        }
-                                      }}
-                                    >
-                                      <span className="flow-item-content">
-                                            {icon} {collection?.title || `Collection ${item.originalIndex + 1}`}
-                                      </span>
-                                      <button 
-                                        className="delete-flow-item"
+                                              isInternal: true
+                                            }));
+                                          }}
+                                          onDragOver={(e) => {
+                                            e.preventDefault();
+                                            e.currentTarget.classList.add('drag-over');
+                                          }}
+                                          onDragLeave={(e) => {
+                                            e.currentTarget.classList.remove('drag-over');
+                                          }}
+                                          onDrop={(e) => {
+                                            e.preventDefault();
+                                            e.currentTarget.classList.remove('drag-over');
+                                            try {
+                                              const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                              if (data.isInternal) {
+                                                handleReorderFlowItems(data.index, index, data.type);
+                                              }
+                                            } catch (error) {
+                                              console.error('Error reordering flow items:', error);
+                                            }
+                                          }}
+                                        >
+                                          <span className="flow-item-content">
+                                            {collection?.title || `Collection ${index + 1}`}
+                                          </span>
+                                          <button 
+                                            className="delete-flow-item"
                                             onClick={(e) => {
-                                              e.stopPropagation(); // Prevent triggering the parent click
-                                          const updatedFlow = {
-                                            ...selectedFlow,
-                                                listOfLists: selectedFlow.listOfLists.filter((_, i) => i !== item.originalIndex),
-                                            updatedAt: new Date()
-                                          };
-                                          setFlowsList(prev => prev.map(flow => 
-                                            flow.id === selectedFlow.id ? updatedFlow : flow
-                                          ));
-                                          setSelectedFlow(updatedFlow);
-                                        }}
-                                        title="Remove from flow"
-                                      >
-                                        🗑️
-                                      </button>
-                                    </div>
-                                  );
+                                              e.stopPropagation();
+                                              const updatedFlow = {
+                                                ...selectedFlow,
+                                                flowItems: selectedFlow.flowItems.filter((_, i) => i !== index),
+                                                updatedAt: new Date()
+                                              };
+                                              setFlowsList(prev => prev.map(flow => 
+                                                flow.id === selectedFlow.id ? updatedFlow : flow
+                                              ));
+                                              setSelectedFlow(updatedFlow);
+                                            }}
+                                            title="Remove from flow"
+                                          >
+                                            🗑️
+                                          </button>
+                                        </div>
+                                      );
                                     } else if (item.type === 'note') {
                                       return (
-                                  <div 
-                                          key={`note-${item.originalIndex}`} 
-                                          className={`flow-item note-flow-item draggable-flow-item ${draggedItem?.type === 'note' && draggedItem?.index === unifiedIndex ? 'dragging' : ''}`}
-                                    draggable
-                                    onDragStart={(e) => {
-                                            setDraggedItem({ type: 'note', index: unifiedIndex });
-                                      e.dataTransfer.setData('text/plain', JSON.stringify({
-                                        type: 'note',
-                                              index: unifiedIndex,
-                                              note: item.note,
-                                              position: item.position,
-                                        isInternal: true
-                                      }));
-                                    }}
-                                    onDragEnd={() => {
-                                      setDraggedItem(null);
-                                    }}
-                                    onDragOver={(e) => {
-                                      e.preventDefault();
-                                      e.currentTarget.classList.add('drag-over');
-                                    }}
-                                    onDragLeave={(e) => {
-                                      e.currentTarget.classList.remove('drag-over');
-                                    }}
-                                    onDrop={(e) => {
-                                      e.preventDefault();
-                                      e.currentTarget.classList.remove('drag-over');
-                                      try {
-                                        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-                                        if (data.isInternal && (data.type === 'collection' || data.type === 'note')) {
-                                                handleReorderFlowItems(data.index, unifiedIndex, data.type);
-                                        }
-                                      } catch (error) {
-                                        console.error('Error reordering flow items:', error);
-                                      }
-                                    }}
-                                  >
-                                    <input
-                                      type="text"
-                                            value={item.note || ''}
-                                      onChange={(e) => {
-                                        const updatedFlow = {
-                                          ...selectedFlow,
-                                          listOfNotes: selectedFlow.listOfNotes.map((n, i) => 
-                                                  i === item.originalIndex ? e.target.value : n
-                                          ),
-                                          updatedAt: new Date()
-                                        };
-                                        setFlowsList(prev => prev.map(flow => 
-                                          flow.id === selectedFlow.id ? updatedFlow : flow
-                                        ));
-                                        setSelectedFlow(updatedFlow);
-                                      }}
-                                      className="note-input"
-                                      placeholder="Type your note..."
-                                    />
-                                    <button 
-                                      className="delete-flow-item"
-                                      onClick={() => {
-                                        const updatedFlow = {
-                                          ...selectedFlow,
-                                                listOfNotes: selectedFlow.listOfNotes.filter((_, i) => i !== item.originalIndex),
-                                                listOfNotePosition: selectedFlow.listOfNotePosition.filter((_, i) => i !== item.originalIndex),
-                                          updatedAt: new Date()
-                                        };
-                                        setFlowsList(prev => prev.map(flow => 
-                                          flow.id === selectedFlow.id ? updatedFlow : flow
-                                        ));
-                                        setSelectedFlow(updatedFlow);
-                                      }}
-                                      title="Remove from flow"
-                                    >
-                                      🗑️
-                                    </button>
-                                  </div>
+                                        <div 
+                                          key={`note-${item.id}`} 
+                                          className="flow-item note-flow-item draggable-flow-item"
+                                          draggable
+                                          onDragStart={(e) => {
+                                            e.dataTransfer.setData('text/plain', JSON.stringify({
+                                              type: 'note',
+                                              index: index,
+                                              noteId: item.id,
+                                              isInternal: true
+                                            }));
+                                          }}
+                                          onDragOver={(e) => {
+                                            e.preventDefault();
+                                            e.currentTarget.classList.add('drag-over');
+                                          }}
+                                          onDragLeave={(e) => {
+                                            e.currentTarget.classList.remove('drag-over');
+                                          }}
+                                          onDrop={(e) => {
+                                            e.preventDefault();
+                                            e.currentTarget.classList.remove('drag-over');
+                                            try {
+                                              const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                              if (data.isInternal) {
+                                                handleReorderFlowItems(data.index, index, data.type);
+                                              }
+                                            } catch (error) {
+                                              console.error('Error reordering flow items:', error);
+                                            }
+                                          }}
+                                        >
+                                          {editingNoteIndex === index ? (
+                                            <input
+                                              type="text"
+                                              className="note-input"
+                                              value={item.note || ''}
+                                              onChange={(e) => {
+                                                const updatedFlowItems = [...selectedFlow.flowItems];
+                                                updatedFlowItems[index] = {
+                                                  ...updatedFlowItems[index],
+                                                  note: e.target.value
+                                                };
+                                                const updatedFlow = {
+                                                  ...selectedFlow,
+                                                  flowItems: updatedFlowItems,
+                                                  updatedAt: new Date()
+                                                };
+                                                setFlowsList(prev => prev.map(flow => 
+                                                  flow.id === selectedFlow.id ? updatedFlow : flow
+                                                ));
+                                                setSelectedFlow(updatedFlow);
+                                              }}
+                                              onBlur={() => setEditingNoteIndex(null)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  setEditingNoteIndex(null);
+                                                } else if (e.key === 'Escape') {
+                                                  setEditingNoteIndex(null);
+                                                }
+                                              }}
+                                              autoFocus
+                                            />
+                                          ) : (
+                                            <span 
+                                              className="flow-item-content"
+                                              onClick={() => setEditingNoteIndex(index)}
+                                              style={{ cursor: 'pointer' }}
+                                            >
+                                              {item.note || 'Click to type'}
+                                            </span>
+                                          )}
+                                          <button 
+                                            className="delete-flow-item"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              const updatedFlow = {
+                                                ...selectedFlow,
+                                                flowItems: selectedFlow.flowItems.filter((_, i) => i !== index),
+                                                updatedAt: new Date()
+                                              };
+                                              setFlowsList(prev => prev.map(flow => 
+                                                flow.id === selectedFlow.id ? updatedFlow : flow
+                                              ));
+                                              setSelectedFlow(updatedFlow);
+                                            }}
+                                            title="Remove from flow"
+                                          >
+                                            🗑️
+                                          </button>
+                                        </div>
                                       );
                                     }
                                     return null;
-                                  });
-                                })()}
+                                  })}
                               </>
                             ) : (
                               <div className="empty-flow">
@@ -2638,47 +2524,48 @@ function App() {
                       noteText?: string;
                     }> = [];
 
-                    // Add collections
-                    selectedPresentationFlow.listOfLists.forEach((collectionId, index) => {
-                      const song = songsList.find(s => s.id === collectionId);
-                      const sermon = sermonsList.find(s => s.id === collectionId);
-                      const assetDeck = assetDecksList.find(a => a.id === collectionId);
+                    // Get flow items in user-created order
+                    const sortedFlowItems = selectedPresentationFlow.flowItems.sort((a, b) => a.order - b.order);
+                    
+                    sortedFlowItems.forEach((item) => {
+                      if (item.type === 'collection') {
+                        const song = songsList.find(s => s.id === item.id);
+                        const sermon = sermonsList.find(s => s.id === item.id);
+                        const assetDeck = assetDecksList.find(a => a.id === item.id);
 
-                      if (song) {
-                        const songSlides = slides.filter(slide => song.slideIds.includes(slide.id));
+                        if (song) {
+                          const songSlides = slides.filter(slide => song.slideIds.includes(slide.id));
+                          flowItems.push({
+                            type: 'collection',
+                            id: song.id,
+                            title: `Song: ${song.title}`,
+                            slides: songSlides
+                          });
+                        } else if (sermon) {
+                          const sermonSlides = slides.filter(slide => sermon.slideIds.includes(slide.id));
+                          flowItems.push({
+                            type: 'collection',
+                            id: sermon.id,
+                            title: `Sermon: ${sermon.title}`,
+                            slides: sermonSlides
+                          });
+                        } else if (assetDeck) {
+                          const assetSlides = slides.filter(slide => assetDeck.slideIds.includes(slide.id));
+                          flowItems.push({
+                            type: 'collection',
+                            id: assetDeck.id,
+                            title: `Asset Deck: ${assetDeck.title}`,
+                            slides: assetSlides
+                          });
+                        }
+                      } else if (item.type === 'note') {
                         flowItems.push({
-                          type: 'collection',
-                          id: song.id,
-                          title: `Song: ${song.title}`,
-                          slides: songSlides
-                        });
-                      } else if (sermon) {
-                        const sermonSlides = slides.filter(slide => sermon.slideIds.includes(slide.id));
-                        flowItems.push({
-                          type: 'collection',
-                          id: sermon.id,
-                          title: `Sermon: ${sermon.title}`,
-                          slides: sermonSlides
-                        });
-                      } else if (assetDeck) {
-                        const assetSlides = slides.filter(slide => assetDeck.slideIds.includes(slide.id));
-                        flowItems.push({
-                          type: 'collection',
-                          id: assetDeck.id,
-                          title: `Asset Deck: ${assetDeck.title}`,
-                          slides: assetSlides
+                          type: 'note',
+                          id: item.id,
+                          title: 'Note',
+                          noteText: item.note || ''
                         });
                       }
-                    });
-
-                    // Add notes
-                    selectedPresentationFlow.listOfNotes.forEach((noteText, index) => {
-                      flowItems.push({
-                        type: 'note',
-                        id: `note-${index}`,
-                        title: 'Note',
-                        noteText: noteText
-                      });
                     });
 
                     return flowItems.map((item, index) => (
@@ -2725,6 +2612,7 @@ function App() {
                         <SlideGrid
                           slides={selectedCollection.slides}
                           onSlideClick={(slide) => handleSlideActivation(slide)} // Updated to use handleSlideActivation
+                          activeSlideId={activeSlide?.id}
                         />
                       </div>
                     ) : (
@@ -2744,47 +2632,48 @@ function App() {
                         slides?: ISlide[];
                       }> = [];
 
-                      // Add collections
-                      selectedPresentationFlow.listOfLists.forEach((collectionId, index) => {
-                        const song = songsList.find(s => s.id === collectionId);
-                        const sermon = sermonsList.find(s => s.id === collectionId);
-                        const assetDeck = assetDecksList.find(a => a.id === collectionId);
+                      // Get flow items in user-created order
+                      const sortedFlowItems = selectedPresentationFlow.flowItems.sort((a, b) => a.order - b.order);
+                      
+                      sortedFlowItems.forEach((item) => {
+                        if (item.type === 'collection') {
+                          const song = songsList.find(s => s.id === item.id);
+                          const sermon = sermonsList.find(s => s.id === item.id);
+                          const assetDeck = assetDecksList.find(a => a.id === item.id);
 
-                        if (song) {
-                          const songSlides = slides.filter(slide => song.slideIds.includes(slide.id));
+                          if (song) {
+                            const songSlides = slides.filter(slide => song.slideIds.includes(slide.id));
+                            flowItems.push({
+                              type: 'collection',
+                              id: song.id,
+                              title: song.title,
+                              slides: songSlides
+                            });
+                          } else if (sermon) {
+                            const sermonSlides = slides.filter(slide => sermon.slideIds.includes(slide.id));
+                            flowItems.push({
+                              type: 'collection',
+                              id: sermon.id,
+                              title: sermon.title,
+                              slides: sermonSlides
+                            });
+                          } else if (assetDeck) {
+                            const assetSlides = slides.filter(slide => assetDeck.slideIds.includes(slide.id));
+                            flowItems.push({
+                              type: 'collection',
+                              id: assetDeck.id,
+                              title: assetDeck.title,
+                              slides: assetSlides
+                            });
+                          }
+                        } else if (item.type === 'note') {
                           flowItems.push({
-                            type: 'collection',
-                            id: song.id,
-                            title: song.title,
-                            slides: songSlides
-                          });
-                        } else if (sermon) {
-                          const sermonSlides = slides.filter(slide => sermon.slideIds.includes(slide.id));
-                          flowItems.push({
-                            type: 'collection',
-                            id: sermon.id,
-                            title: sermon.title,
-                            slides: sermonSlides
-                          });
-                        } else if (assetDeck) {
-                          const assetSlides = slides.filter(slide => assetDeck.slideIds.includes(slide.id));
-                          flowItems.push({
-                            type: 'collection',
-                            id: assetDeck.id,
-                            title: assetDeck.title,
-                            slides: assetSlides
+                            type: 'note',
+                            id: item.id,
+                            title: `Note`,
+                            content: item.note || ''
                           });
                         }
-                      });
-
-                      // Add notes
-                      selectedPresentationFlow.listOfNotes.forEach((note, index) => {
-                        flowItems.push({
-                          type: 'note',
-                          id: `note-${index}`,
-                          title: `Note ${index + 1}`,
-                          content: note
-                        });
                       });
 
                       return flowItems.map((item, index) => (
@@ -2831,6 +2720,7 @@ function App() {
                               <SlideGrid
                                 slides={item.slides}
                                 onSlideClick={(slide) => handleSlideActivation(slide)} // Updated to use handleSlideActivation
+                                activeSlideId={activeSlide?.id}
                               />
                             </div>
                           )}
@@ -2864,6 +2754,7 @@ function App() {
                     editMode={false}
                     onTextEdit={() => {}} // No editing in presentation mode
                     isActive={true} // Enable video playback for active slide
+                    activeSlideId={activeSlide?.id}
                   />
                 </div>
                 <div className="connect-button-container">

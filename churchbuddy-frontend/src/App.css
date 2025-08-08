@@ -391,7 +391,9 @@
   flex: 1;
   padding: 0 20px 20px 20px;
   overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
   justify-content: center;
+  min-width: 0; /* Allow flex item to shrink */
 }
 
 /* Collections Container - Vertical Stack */
@@ -399,8 +401,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  flex: 0 0 45%;
+  flex: 0 0 35%; /* Reduced from 45% to give more space to right column */
   height: 100%;
+  overflow: hidden; /* Prevent any overflow */
+  min-width: 0; /* Allow flex item to shrink */
 }
 
 /* Individual Collection Sections - Each is completely separate */
@@ -412,6 +416,8 @@
   min-height: 150px;
   max-height: 200px;
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .section-title {
@@ -429,6 +435,8 @@
   padding: 12px;
   overflow-y: auto;
   max-height: calc(100% - 45px); /* Account for section title */
+  flex: 1;
+  min-height: 0; /* Allow flex item to shrink */
 }
 
 /* Print Flow Button */
@@ -475,7 +483,9 @@
 .flow-column.current-flow {
   background: rgba(102, 126, 234, 0.1);
   border-color: rgba(102, 126, 234, 0.3);
-  flex: 0 0 25%;
+  flex: 0 0 37.5%; /* Increased from 25% to 37.5% (50% larger) */
+  overflow: hidden; /* Prevent horizontal scrolling */
+  min-width: 0; /* Allow flex item to shrink */
 }
 
 .column-title {
@@ -496,12 +506,14 @@
 
 .column-items {
   flex: 1;
-  padding: 12px;
+  padding: 10px;
   overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   min-height: 200px;
+  min-width: 0; /* Allow flex item to shrink */
 }
 
 .column-items.drop-zone {
@@ -567,9 +579,14 @@
 }
 
 .flow-item-content {
-  flex: 1;
   display: flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  min-width: 0; /* Allow text to shrink */
+  overflow: hidden; /* Prevent text overflow */
 }
 
 .delete-flow-item {
@@ -579,11 +596,19 @@
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 10px;
   opacity: 0;
-  transition: all 0.2s ease;
-  margin-left: 8px;
+  transition: all 0.3s ease;
+  position: absolute;
+  top: 4px;
+  right: 4px;
   flex-shrink: 0; /* Prevent it from taking too much space */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  z-index: 10;
 }
 
 .flow-item:hover .delete-flow-item {
@@ -592,53 +617,78 @@
 
 .delete-flow-item:hover {
   color: #ff4444;
-  background: rgba(255, 68, 68, 0.1);
+  background: rgba(255, 68, 68, 0.15);
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(255, 68, 68, 0.2);
 }
 
 .flow-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: rgba(102, 126, 234, 0.2);
-  border: 1px solid rgba(102, 126, 234, 0.3);
-  border-radius: 6px;
+  justify-content: center;
+  padding: 16px 12px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(102, 126, 234, 0.08) 100%);
+  border: 1px solid rgba(102, 126, 234, 0.25);
+  border-radius: 8px;
   color: white;
-  font-size: 13px;
-  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  width: 100%; /* Ensure it takes full width of its parent */
+  transition: all 0.3s ease;
+  width: 85%; /* Make it narrower */
+  max-width: 450px; /* Limit maximum width */
   flex-shrink: 0; /* Prevent it from shrinking */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.flow-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.8), rgba(102, 126, 234, 0.4));
 }
 
 .flow-item:hover {
-  background: rgba(102, 126, 234, 0.3);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(102, 126, 234, 0.15) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border-color: rgba(102, 126, 234, 0.4);
 }
 
 .flow-item.selected {
-  background: rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.35) 0%, rgba(102, 126, 234, 0.2) 100%);
   border-color: rgba(102, 126, 234, 0.6);
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.4), 0 4px 16px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
 }
 
 .note-flow-item {
-  background: #fff9c4 !important;
-  border-color: #f57f17;
-  color: #8d6e63;
+  background: linear-gradient(135deg, rgba(255, 249, 196, 0.9) 0%, rgba(255, 245, 157, 0.8) 100%) !important;
+  border-color: rgba(255, 193, 7, 0.4);
+  color: #5d4037;
   font-family: 'Comic Sans MS', cursive, sans-serif;
-  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: pre-wrap;
   min-height: 40px;
   display: flex;
   align-items: flex-start;
-  width: 100%;
-  max-width: 100%;
+  width: 85%;
+  max-width: 450px;
   overflow: hidden;
+  margin-left: auto;
+  margin-right: auto;
+  backdrop-filter: blur(10px);
 }
 
 /* Ensure sticky notes have yellow background in presenter view too */
@@ -665,9 +715,10 @@
   width: 100%;
   background: transparent;
   border: none;
-  color: #8d6e63;
-  font-size: 13px;
+  color: #5d4037;
+  font-size: 18px;
   font-family: 'Comic Sans MS', cursive, sans-serif;
+  font-weight: 600;
   outline: none;
   padding: 0;
   word-wrap: break-word;
@@ -681,6 +732,7 @@
   box-sizing: border-box;
   overflow-wrap: anywhere;
   hyphens: auto;
+  text-align: center;
 }
 
 .note-input::placeholder {
@@ -737,11 +789,11 @@
 }
 
 .note-flow-item:hover {
-  background: #fff3e0;
-  border-color: #e65100;
-  color: #5d4037;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(135deg, rgba(255, 243, 224, 0.95) 0%, rgba(255, 236, 179, 0.9) 100%) !important;
+  border-color: rgba(255, 193, 7, 0.6);
+  color: #3e2723;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 /* Asset Decks Welcome Message */

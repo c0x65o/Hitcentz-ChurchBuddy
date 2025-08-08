@@ -1,9 +1,13 @@
 export interface IFlow {
   id: string;
   title: string;
-  listOfLists: string[]; // Array of collection IDs (Songs, Sermons, Asset Decks)
-  listOfNotes: string[]; // Array of note strings like "note 1", "note 2", "baptism"
-  listOfNotePosition: number[]; // Positions for where notes should appear in the flow
+  flowItems: Array<{
+    type: 'collection' | 'note';
+    id: string;
+    title: string;
+    note?: string;
+    order: number; // Simple order number - the order the user created
+  }>;
   createdAt: Date;
   updatedAt: Date;
 } 
