@@ -5,135 +5,113 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChurchBuddy - Second Display</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #000;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100vw;
-            height: 100vh;
-            font-family: Arial, sans-serif;
-        }
-        
-        #slide-container {
-            width: 1920px;
-            height: 1080px;
-            background: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-        
-        .slide-content {
-            width: 100%;
-            height: 100%;
-            background: #000;
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 48px;
-            text-align: center;
-            padding: 40px;
-            box-sizing: border-box;
-        }
-        
-        .waiting {
-            color: #666;
-            font-size: 24px;
-            text-align: center;
-        }
-        
-        /* Slide content styling to match SlideRenderer */
-        .slide-content div {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-        
-        .slide-content img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-        
-        .slide-content video {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
+        body { margin: 0; padding: 0; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; width: 100vw; height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; }
+        #slide-container { width: 1920px; height: 1080px; background: #000; display: flex; justify-content: center; align-items: center; position: relative; }
+        .stage { width: 1920px; height: 1080px; position: relative; overflow: hidden; }
+        .slide-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        .slideText { background: transparent; position: relative; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; line-height: 1.4; color: white; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-height: 100%; white-space: normal; word-break: normal; }
+        .slideText h1, .slideText h2, .slideText h3, .slideText p { margin: 0; font-weight: 600; display: inline-block; text-align: center; max-width: 100%; word-wrap: break-word; }
+        .slideText h2 { font-size: 0.8em; }
+        .slideText h3 { font-size: 0.7em; }
+        .slideText p  { font-size: 0.6em; }
+        .slideText h1, .slideText h2, .slideText h3, .slideText p { margin: 0; font-weight: 600; display: inline-block; text-align: center; max-width: 100%; word-wrap: break-word; }
+        .slideText h2 { font-size: 0.8em; }
+        .slideText h3 { font-size: 0.7em; }
+        .slideText p  { font-size: 0.6em; }
+        .waiting { color: #666; font-size: 24px; text-align: center; }
+        .slideText img, .slideText video { max-width: 100%; max-height: 100%; object-fit: contain; }
     </style>
 </head>
 <body>
     <div id="slide-container">
-        <div id="slide-content" class="waiting">
-            Waiting for slide data...
+        <div class="stage">
+            <div class="slide-content">
+                <div id="slide-text" class="slideText waiting">Waiting for slide data...</div>
+            </div>
         </div>
     </div>
 
     <script>
-        // Listen for slide data from the main window
-        window.addEventListener('message', function(event) {
-            if (event.data.type === 'SLIDE_DATA' && event.data.slide) {
-                const slide = event.data.slide;
-                const slideContainer = document.getElementById('slide-content');
-                
-                // Apply background if present
-                const backgroundMatch = slide.html.match(/<!--BACKGROUND:(.*?)-->/);
-                if (backgroundMatch) {
-                    const backgroundUrl = backgroundMatch[1];
-                    slideContainer.style.backgroundImage = `url(${backgroundUrl})`;
-                    slideContainer.style.backgroundSize = 'cover';
-                    slideContainer.style.backgroundPosition = 'center';
-                    slideContainer.style.backgroundRepeat = 'no-repeat';
-                } else {
-                    slideContainer.style.backgroundImage = 'none';
-                }
-                
-                // Set the slide HTML content
-                slideContainer.innerHTML = slide.html;
-                slideContainer.className = 'slide-content';
-                
-                // Handle video playback for active slides
-                const youtubeIframes = slideContainer.querySelectorAll('iframe[src*="youtube.com"]');
-                youtubeIframes.forEach((iframe) => {
-                    const iframeElement = iframe;
-                    // Ensure autoplay and unmute for active slide
-                    if (!iframeElement.src.includes('autoplay=1')) {
-                        const separator = iframeElement.src.includes('?') ? '&' : '?';
-                        iframeElement.src = `${iframeElement.src}${separator}autoplay=1&mute=0`;
-                    } else if (iframeElement.src.includes('mute=1')) {
-                        // Replace mute=1 with mute=0
-                        iframeElement.src = iframeElement.src.replace('mute=1', 'mute=0');
-                    }
-                });
+        const textEl = document.getElementById('slide-text');
 
-                // Handle native video elements
-                const videoElements = slideContainer.querySelectorAll('video');
-                videoElements.forEach((video) => {
-                    // Unmute and play for active slide
-                    video.muted = false;
-                    video.play().catch((error) => {
-                        console.log('Video play failed:', error);
-                    });
-                });
-            }
+        function applyBackground(slide){
+          const backgroundMatch = slide.html.match(/<!--BACKGROUND:(.*?)-->/);
+          const stage = document.querySelector('.stage');
+          if (backgroundMatch && stage) {
+            const backgroundUrl = backgroundMatch[1];
+            stage.style.backgroundImage = `url(${backgroundUrl})`;
+            stage.style.backgroundSize = 'cover';
+            stage.style.backgroundPosition = 'center';
+            stage.style.backgroundRepeat = 'no-repeat';
+          } else if (stage) {
+            stage.style.backgroundImage = 'none';
+          }
+        }
+
+        function computeFontSize(html){
+          // Mirror SlideRenderer font-size logic for text slides (1920x1080, padding already accounted by 20px)
+          const temp = document.createElement('div');
+          temp.innerHTML = html;
+          temp.style.position = 'absolute';
+          temp.style.visibility = 'hidden';
+          temp.style.whiteSpace = 'normal';
+          temp.style.wordBreak = 'normal';
+          // Account for outer and inner paddings
+          const wrapperPadding = 20; // .slide-content padding
+          const padMatch = html.match(/padding\s*:\s*(\d+)px/i);
+          const innerPadding = padMatch ? parseInt(padMatch[1], 10) : 0;
+          const totalPad = wrapperPadding + innerPadding;
+          const availW = 1920 - 2 * totalPad;
+          const availH = 1080 - 2 * totalPad;
+          temp.style.maxWidth = availW + 'px';
+          temp.style.lineHeight = '1.4';
+          temp.style.fontWeight = '600';
+          temp.style.textAlign = 'center';
+          temp.style.boxSizing = 'border-box';
+          document.body.appendChild(temp);
+          let min = 8, max = 80, best = min;
+          const fits = (size)=>{ temp.style.fontSize = size+'px'; return temp.scrollWidth<=availW && temp.scrollHeight <= availH; };
+          while(min<=max){ const mid = Math.floor((min+max)/2); if(fits(mid)){ best = mid; min = mid+1;} else { max = mid-1; } }
+          document.body.removeChild(temp); return best;
+        }
+
+        function renderSlide(slide){
+          applyBackground(slide);
+          textEl.classList.remove('waiting');
+
+          // If this is a video slide, just inject the HTML and let it size itself
+          if (/<iframe/i.test(slide.html)){
+            textEl.style.fontSize = '';
+            textEl.innerHTML = `<div style="width:100%;height:100%;position:relative">${slide.html}</div>`;
+          } else {
+            // Strip any inline font-size from HTML so container controls final size
+            const sanitized = slide.html.replace(/font-size\s*:\s*[^;"']+;?/gi, '');
+            const fontSize = computeFontSize(sanitized);
+            textEl.style.fontSize = fontSize + 'px';
+            textEl.innerHTML = sanitized;
+          }
+
+          // Adjust videos (unmute/play)
+          const youtubeIframes = textEl.querySelectorAll('iframe[src*="youtube.com"]');
+          youtubeIframes.forEach((iframe) => {
+            const el = iframe; const sep = el.src.includes('?') ? '&' : '?';
+            if (!el.src.includes('autoplay=1')) el.src = `${el.src}${sep}autoplay=1`;
+            if (el.src.includes('mute=1')) el.src = el.src.replace('mute=1','mute=0'); else if (!el.src.includes('mute=0')) el.src = `${el.src}${sep}mute=0`;
+          });
+          const videos = textEl.querySelectorAll('video');
+          videos.forEach((v)=>{ v.muted=false; v.play().catch(()=>{}); });
+        }
+
+        window.addEventListener('message', function(event) {
+          if (event.data.type === 'SLIDE_DATA' && event.data.slide) {
+            renderSlide(event.data.slide);
+          }
         });
 
-        // Request slide data when page loads
         window.addEventListener('load', function() {
-            if (window.opener) {
-                window.opener.postMessage({
-                    type: 'REQUEST_SLIDE_DATA'
-                }, '*');
-            }
+          if (window.opener) {
+            window.opener.postMessage({ type: 'REQUEST_SLIDE_DATA' }, '*');
+          }
         });
     </script>
 </body>

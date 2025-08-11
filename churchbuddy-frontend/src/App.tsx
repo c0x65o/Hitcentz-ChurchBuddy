@@ -28,23 +28,9 @@ function App() {
   const [songsContent, setSongsContent] = useState('');
   const [sermonsContent, setSermonsContent] = useState('');
   const [showSongTitleModal, setShowSongTitleModal] = useState(false);
-  const [songsList, setSongsList] = useState<ISong[]>([
-    { id: 'song-1', title: 'Amazing Grace', description: 'Amazing grace, how sweet the sound...', slideIds: [], createdAt: new Date(), updatedAt: new Date() },
-    { id: 'song-2', title: 'How Great Thou Art', description: 'O Lord my God, when I in awesome wonder...', slideIds: [], createdAt: new Date(), updatedAt: new Date() },
-    { id: 'song-3', title: 'It Is Well', description: 'When peace like a river attendeth my way...', slideIds: [], createdAt: new Date(), updatedAt: new Date() }
-  ]);
-  
-  const [sermonsList, setSermonsList] = useState<ISermon[]>([
-    { id: 'sermon-1', title: 'The Prodigal Son', description: 'Luke 15:11-32...', slideIds: [], createdAt: new Date(), updatedAt: new Date() },
-    { id: 'sermon-2', title: 'Walking in Faith', description: 'Hebrews 11:1...', slideIds: [], createdAt: new Date(), updatedAt: new Date() },
-    { id: 'sermon-3', title: 'God\'s Love', description: 'John 3:16...', slideIds: [], createdAt: new Date(), updatedAt: new Date() }
-  ]);
-  
-  const [assetDecksList, setAssetDecksList] = useState<IAssetDeck[]>([
-    { id: 'deck-1', title: "click 'New Asset' to start", slideIds: [], createdAt: new Date(), updatedAt: new Date() },
-    { id: 'deck-2', title: 'Announcements', slideIds: [], createdAt: new Date(), updatedAt: new Date() },
-    { id: 'deck-3', title: 'Prayer Requests', slideIds: [], createdAt: new Date(), updatedAt: new Date() }
-  ]);
+  const [songsList, setSongsList] = useState<ISong[]>([]);
+  const [sermonsList, setSermonsList] = useState<ISermon[]>([]);
+  const [assetDecksList, setAssetDecksList] = useState<IAssetDeck[]>([]);
   const [selectedSong, setSelectedSong] = useState<ISong | null>(null);
   const [selectedSermon, setSelectedSermon] = useState<ISermon | null>(null);
   const [showSermonTitleModal, setShowSermonTitleModal] = useState(false);
@@ -74,64 +60,349 @@ function App() {
     updatedAt: new Date()
   });
 
-  const [slides, setSlides] = useState<ISlide[]>([
-    {
-      id: '1',
-      title: 'Welcome',
-      html: '<h1>Welcome</h1>',
-      order: 1,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: '2',
-      title: 'Short Title',
-      html: '<h1>Grace</h1>',
-      order: 2,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: '3',
-      title: 'Medium Length',
-      html: '<h1>Amazing Grace How Sweet</h1>',
-      order: 3,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: '4',
-      title: 'Long Text',
-      html: '<h1>The Lord is my shepherd I shall not want</h1>',
-      order: 4,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: '5',
-      title: 'Very Long Text',
-      html: '<h1>For God so loved the world that he gave his one and only Son that whoever believes in him shall not perish but have eternal life</h1>',
-      order: 5,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: '6',
-      title: 'Multi-line Text',
-      html: '<h1>Line One<br/>Line Two<br/>Line Three</h1>',
-      order: 6,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: '7',
-      title: 'Mixed Content',
-      html: '<h1>Main Title</h1><p>Subtitle text here</p>',
-      order: 7,
-      createdAt: new Date(),
-      updatedAt: new Date()
+  const [slides, setSlides] = useState<ISlide[]>([]);
+
+  // Load slides from localStorage on component mount
+  useEffect(() => {
+    const savedSlides = localStorage.getItem('churchbuddy-slides');
+    if (savedSlides) {
+      try {
+        const parsedSlides = JSON.parse(savedSlides);
+        setSlides(parsedSlides);
+        console.log('Loaded slides from localStorage:', parsedSlides.length);
+      } catch (error) {
+        console.error('Error loading slides from localStorage:', error);
+      }
     }
-  ]);
+  }, []);
+
+  // Save slides to backend and localStorage whenever slides change
+  useEffect(() => {
+    if (backendConnected) {
+      // Sync to backend
+      slides.forEach(async (slide) => {
+        try {
+          await fetch(`http://localhost:5001/api/slides`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(slide)
+          });
+        } catch (error) {
+          console.error('Error syncing slide to backend:', error);
+        }
+      });
+    }
+    // Don't save slides to localStorage - they're too large and cause quota issues
+    // Slides are stored in the backend database instead
+    console.log('Slides synced to backend:', slides.length);
+  }, [slides, backendConnected]);
+
+  // Load collections from backend on component mount
+  useEffect(() => {
+    const loadDataFromBackend = async () => {
+      try {
+        // Load songs
+        const songsResponse = await fetch('http://localhost:5001/api/songs');
+        let songs = [];
+        if (songsResponse.ok) {
+          songs = await songsResponse.json();
+          setSongsList(songs);
+          console.log('Loaded songs from backend:', songs.length);
+        }
+
+        // Load sermons
+        const sermonsResponse = await fetch('http://localhost:5001/api/sermons');
+        if (sermonsResponse.ok) {
+          const sermons = await sermonsResponse.json();
+          setSermonsList(sermons);
+          console.log('Loaded sermons from backend:', sermons.length);
+        }
+
+        // Load asset decks
+        const assetDecksResponse = await fetch('http://localhost:5001/api/asset-decks');
+        if (assetDecksResponse.ok) {
+          const assetDecks = await assetDecksResponse.json();
+          setAssetDecksList(assetDecks);
+          console.log('Loaded asset decks from backend:', assetDecks.length);
+        }
+
+        // Load flows
+        const flowsResponse = await fetch('http://localhost:5001/api/flows');
+        if (flowsResponse.ok) {
+          const flows = await flowsResponse.json();
+          setFlowsList(flows);
+          console.log('Loaded flows from backend:', flows.length);
+        }
+
+        // Load slides
+        const slidesResponse = await fetch('http://localhost:5001/api/slides');
+        if (slidesResponse.ok) {
+          const slides = await slidesResponse.json();
+          setSlides(slides);
+          console.log('Loaded slides from backend:', slides.length);
+        }
+
+        setBackendConnected(true);
+        
+        // Clear orphaned slides (slides that don't belong to any collection)
+        clearOrphanedSlides();
+        
+        // Clear all slides if no collections exist
+        clearAllSlides();
+        
+        // Regenerate slides for songs that have content but no slides
+        regenerateMissingSlides(songs);
+      } catch (error) {
+        console.error('Error loading data from backend:', error);
+        // Fallback to localStorage if backend is not available
+        const songs = loadFromLocalStorage();
+        
+        // Clear orphaned slides (slides that don't belong to any collection)
+        clearOrphanedSlides();
+        
+        // Clear all slides if no collections exist
+        clearAllSlides();
+        
+        // Regenerate slides for songs that have content but no slides
+        regenerateMissingSlides(songs);
+      }
+    };
+
+    const regenerateMissingSlides = (songs: ISong[]) => {
+      songs.forEach(song => {
+        const songContent = localStorage.getItem(`song-lyrics-${song.id}`);
+        if (songContent && songContent.trim() && song.slideIds.length === 0) {
+          console.log(`Regenerating slides for song: ${song.title}`);
+          generateSlidesFromLyrics(songContent, song);
+        }
+      });
+    };
+
+    const loadFromLocalStorage = () => {
+      // Load songs
+      const savedSongs = localStorage.getItem('churchbuddy-songs');
+      let songs = [];
+      if (savedSongs) {
+        try {
+          songs = JSON.parse(savedSongs);
+          setSongsList(songs);
+          console.log('Loaded songs from localStorage:', songs.length);
+        } catch (error) {
+          console.error('Error loading songs from localStorage:', error);
+        }
+      }
+      
+      return songs;
+
+      // Load sermons
+      const savedSermons = localStorage.getItem('churchbuddy-sermons');
+      if (savedSermons) {
+        try {
+          const parsedSermons = JSON.parse(savedSermons as string);
+          setSermonsList(parsedSermons);
+          console.log('Loaded sermons from localStorage:', parsedSermons.length);
+        } catch (error) {
+          console.error('Error loading sermons from localStorage:', error);
+        }
+      }
+
+      // Load asset decks
+      const savedAssetDecks = localStorage.getItem('churchbuddy-asset-decks');
+      if (savedAssetDecks) {
+        try {
+          const parsedAssetDecks = JSON.parse(savedAssetDecks as string);
+          setAssetDecksList(parsedAssetDecks);
+          console.log('Loaded asset decks from localStorage:', parsedAssetDecks.length);
+        } catch (error) {
+          console.error('Error loading asset decks from localStorage:', error);
+        }
+      }
+
+      // Load flows
+      const savedFlows = localStorage.getItem('churchbuddy-flows');
+      if (savedFlows) {
+        try {
+          const parsedFlows = JSON.parse(savedFlows as string);
+          setFlowsList(parsedFlows);
+          console.log('Loaded flows from localStorage:', parsedFlows.length);
+        } catch (error) {
+          console.error('Error loading flows from localStorage:', error);
+        }
+      }
+
+      // Load slides
+      const savedSlides = localStorage.getItem('churchbuddy-slides');
+      if (savedSlides) {
+        try {
+          const parsedSlides = JSON.parse(savedSlides as string);
+          setSlides(parsedSlides);
+          console.log('Loaded slides from localStorage:', parsedSlides.length);
+        } catch (error) {
+          console.error('Error loading slides from localStorage:', error);
+        }
+      }
+    };
+
+    loadDataFromBackend();
+  }, []);
+
+  // Save collections to backend and localStorage whenever they change
+  useEffect(() => {
+    if (backendConnected) {
+      // Sync to backend - use PUT for existing songs, POST for new ones
+      songsList.forEach(async (song) => {
+        try {
+          const method = song.id ? 'PUT' : 'POST';
+          const url = song.id ? `http://localhost:5001/api/songs/${song.id}` : 'http://localhost:5001/api/songs';
+          await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(song)
+          });
+        } catch (error) {
+          console.error('Error syncing song to backend:', error);
+        }
+      });
+    }
+    // Only save essential data to localStorage as backup (without slide content)
+    if (songsList) {
+      const songsForStorage = songsList.map(song => ({
+        id: song.id,
+        title: song.title,
+        description: song.description,
+        slideIds: song.slideIds,
+        createdAt: song.createdAt,
+        updatedAt: song.updatedAt
+      }));
+      try {
+        localStorage.setItem('churchbuddy-songs', JSON.stringify(songsForStorage));
+        console.log('Saved songs to localStorage:', songsList.length);
+      } catch (error) {
+        console.error('localStorage quota exceeded, skipping songs backup:', error);
+      }
+    }
+  }, [songsList, backendConnected]);
+
+  // Clean up orphaned slides when songs change
+  useEffect(() => {
+    clearOrphanedSlides();
+  }, [songsList]);
+
+  useEffect(() => {
+    if (backendConnected) {
+      // Sync to backend
+      sermonsList.forEach(async (sermon) => {
+        try {
+          await fetch(`http://localhost:5001/api/sermons`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sermon)
+          });
+        } catch (error) {
+          console.error('Error syncing sermon to backend:', error);
+        }
+      });
+    }
+    // Only save essential data to localStorage as backup
+    if (sermonsList) {
+      const sermonsForStorage = sermonsList.map(sermon => ({
+        id: sermon.id,
+        title: sermon.title,
+        description: sermon.description,
+        slideIds: sermon.slideIds,
+        createdAt: sermon.createdAt,
+        updatedAt: sermon.updatedAt
+      }));
+      try {
+        localStorage.setItem('churchbuddy-sermons', JSON.stringify(sermonsForStorage));
+        console.log('Saved sermons to localStorage:', sermonsList.length);
+      } catch (error) {
+        console.error('localStorage quota exceeded, skipping sermons backup:', error);
+      }
+    }
+  }, [sermonsList, backendConnected]);
+
+  // Clean up orphaned slides when sermons change
+  useEffect(() => {
+    clearOrphanedSlides();
+  }, [sermonsList]);
+
+  useEffect(() => {
+    if (backendConnected) {
+      // Sync to backend
+      assetDecksList.forEach(async (assetDeck) => {
+        try {
+          await fetch(`http://localhost:5001/api/asset-decks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(assetDeck)
+          });
+        } catch (error) {
+          console.error('Error syncing asset deck to backend:', error);
+        }
+      });
+    }
+    // Only save essential data to localStorage as backup
+    if (assetDecksList) {
+      const assetDecksForStorage = assetDecksList.map(deck => ({
+        id: deck.id,
+        title: deck.title,
+        description: deck.description,
+        slideIds: deck.slideIds,
+        createdAt: deck.createdAt,
+        updatedAt: deck.updatedAt
+      }));
+      try {
+        localStorage.setItem('churchbuddy-asset-decks', JSON.stringify(assetDecksForStorage));
+        console.log('Saved asset decks to localStorage:', assetDecksList.length);
+      } catch (error) {
+        console.error('localStorage quota exceeded, skipping asset decks backup:', error);
+      }
+    }
+  }, [assetDecksList, backendConnected]);
+
+  // Clean up orphaned slides when asset decks change
+  useEffect(() => {
+    clearOrphanedSlides();
+  }, [assetDecksList]);
+
+  useEffect(() => {
+    if (backendConnected) {
+      // Sync to backend
+      flowsList.forEach(async (flow) => {
+        try {
+          await fetch(`http://localhost:5001/api/flows`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(flow)
+          });
+        } catch (error) {
+          console.error('Error syncing flow to backend:', error);
+        }
+      });
+    }
+    // Only save essential data to localStorage as backup
+    if (flowsList) {
+      const flowsForStorage = flowsList.map(flow => ({
+        id: flow.id,
+        title: flow.title,
+        flowItems: flow.flowItems,
+        createdAt: flow.createdAt,
+        updatedAt: flow.updatedAt
+      }));
+      try {
+        localStorage.setItem('churchbuddy-flows', JSON.stringify(flowsForStorage));
+        console.log('Saved flows to localStorage:', flowsList.length);
+      } catch (error) {
+        console.error('localStorage quota exceeded, skipping flows backup:', error);
+      }
+    }
+  }, [flowsList, backendConnected]);
+
+  // Clean up orphaned slides when flows change (flows can reference collections)
+  useEffect(() => {
+    clearOrphanedSlides();
+  }, [flowsList]);
 
   const handleEdit = (slideId: string) => {
     console.log('Edit slide:', slideId);
@@ -176,6 +447,9 @@ function App() {
         ...deck,
         slideIds: deck.slideIds.filter(id => id !== slideId)
       })));
+      
+      // Clean up any remaining orphaned slides
+      clearOrphanedSlides();
       
       console.log('Slide deleted successfully');
     } catch (error) {
@@ -291,8 +565,21 @@ function App() {
       }
     }
     
-    // Remove all existing slides for this song
+    // Remove all existing slides for this song from frontend state
     setSlides(prev => prev.filter(slide => !song.slideIds.includes(slide.id)));
+    
+    // Delete old slides from backend database
+    if (backendConnected && song.slideIds.length > 0) {
+      song.slideIds.forEach(async (slideId) => {
+        try {
+          await fetch(`http://localhost:5001/api/slides/${slideId}`, {
+            method: 'DELETE'
+          });
+        } catch (error) {
+          console.error('Error deleting old slide from backend:', error);
+        }
+      });
+    }
     
     // Clear the song's slideIds
     const updatedSong = { ...song, slideIds: [], updatedAt: new Date() };
@@ -350,6 +637,15 @@ function App() {
     
     // Keep the song selected with updated slideIds
     setSelectedSong(finalUpdatedSong);
+    
+    // Save the updated song to backend to persist the slideIds
+    if (backendConnected) {
+      fetch(`http://localhost:5001/api/songs/${finalUpdatedSong.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(finalUpdatedSong)
+      }).catch(err => console.error('Error saving updated song to backend:', err));
+    }
     
     console.log(`Generated ${newSlides.length} slides for song: ${song.title}`);
   };
@@ -467,8 +763,21 @@ function App() {
       }
     }
     
-    // Remove all existing slides for this sermon
+    // Remove all existing slides for this sermon from frontend state
     setSlides(prev => prev.filter(slide => !sermon.slideIds.includes(slide.id)));
+    
+    // Delete old slides from backend database
+    if (backendConnected && sermon.slideIds.length > 0) {
+      sermon.slideIds.forEach(async (slideId) => {
+        try {
+          await fetch(`http://localhost:5001/api/slides/${slideId}`, {
+            method: 'DELETE'
+          });
+        } catch (error) {
+          console.error('Error deleting old sermon slide from backend:', error);
+        }
+      });
+    }
     
     // Clear the sermon's slideIds
     const updatedSermon = { ...sermon, slideIds: [], updatedAt: new Date() };
@@ -527,6 +836,15 @@ function App() {
     // Keep the sermon selected with updated slideIds
     setSelectedSermon(finalUpdatedSermon);
     
+    // Save the updated sermon to backend to persist the slideIds
+    if (backendConnected) {
+      fetch(`http://localhost:5001/api/sermons/${finalUpdatedSermon.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(finalUpdatedSermon)
+      }).catch(err => console.error('Error saving updated sermon to backend:', err));
+    }
+    
     console.log(`Generated ${newSlides.length} slides for sermon: ${sermon.title}`);
   };
 
@@ -538,6 +856,18 @@ function App() {
     console.log('Selected song:', songTitle);
     const song = songsList.find(s => s.title === songTitle);
     setSelectedSong(song || null);
+    
+    // Check if this song has content but no slides, and regenerate slides if needed
+    if (song) {
+      const songContent = localStorage.getItem(`song-lyrics-${song.id}`);
+      if (songContent && songContent.trim() && song.slideIds.length === 0) {
+        console.log('Song has content but no slides, regenerating...');
+        // Small delay to ensure the TextEditor has loaded the content
+        setTimeout(() => {
+          generateSlidesFromLyrics(songContent, song);
+        }, 100);
+      }
+    }
   };
 
   const handleCreateSong = (title: string) => {
@@ -729,68 +1059,29 @@ function App() {
         if (firstSlide) {
           setEditingSlide(firstSlide);
         }
-      } else {
-        // If deck is empty, automatically create a new asset (like clicking "New Asset")
-        const newSlide: ISlide = {
-          id: `slide-${Date.now()}`,
-          title: 'New Asset',
-          html: '<h1>New Asset</h1>',
-          order: slides.length + 1,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        
-        setSlides(prev => [...prev, newSlide]);
-        setEditingSlide(newSlide); // Load the new slide into the editor
-        
-        // Add the new slide to the selected asset deck
-        const updatedAssetDeck = {
-          ...assetDeck,
-          slideIds: [newSlide.id],
-          updatedAt: new Date()
-        };
-        
-        setAssetDecksList(prev => prev.map(deck => 
-          deck.id === assetDeck.id ? updatedAssetDeck : deck
-        ));
-        setSelectedAssetDeck(updatedAssetDeck);
-        
-        console.log('Auto-created new asset for empty deck:', newSlide);
       }
+      // If deck is empty, don't auto-create slides - let user create them manually
       
       console.log('Selected asset deck:', assetDeck);
     }
   };
 
   const handleCreateAssetDeck = (title: string) => {
-    // Create a new blank slide first with proper div wrapper for activation
-    const newSlide: ISlide = {
-      id: `slide-${Date.now()}`,
-      title: 'New Asset',
-      html: '<div style="text-align: center; padding: 40px; color: white; font-weight: bold; line-height: 1.4;"><h1>New Asset</h1></div>',
-      order: slides.length + 1,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    // Create the new asset deck
+    // Create the new asset deck without any initial slides
     const newAssetDeck: IAssetDeck = {
       id: `asset-deck-${Date.now()}`,
       title,
-      slideIds: [newSlide.id], // Add the new slide to the deck immediately
+      slideIds: [], // Start with empty slide list
       createdAt: new Date(),
       updatedAt: new Date()
     };
     
     // Update state
-    setSlides(prev => [...prev, newSlide]);
     setAssetDecksList(prev => [...prev, newAssetDeck]);
     setSelectedAssetDeck(newAssetDeck);
-    setCurrentSlideIndex(0);
-    setEditingSlide(newSlide); // Load the new slide into the editor
     setShowAssetDeckTitleModal(false);
     
-    console.log('Created new asset deck with initial slide:', newAssetDeck);
+    console.log('Created new asset deck:', newAssetDeck);
   };
 
   const handleAddToDeck = () => {
@@ -1184,28 +1475,190 @@ function App() {
 
   const handleDeleteItem = (itemTitle: string) => {
     if (activeModule === 'songs') {
-      setSongsList(prev => prev.filter(song => song.title !== itemTitle));
-      if (selectedSong?.title === itemTitle) {
-        setSelectedSong(null);
-        setSongsContent('');
+      const songToDelete = songsList.find(song => song.title === itemTitle);
+      if (songToDelete) {
+        // Delete associated slides first
+        const slidesToDelete = slides.filter(slide => songToDelete.slideIds.includes(slide.id));
+        slidesToDelete.forEach(async (slide) => {
+          // Delete from backend
+          if (backendConnected) {
+            try {
+              await fetch(`http://localhost:5001/api/slides/${slide.id}`, {
+                method: 'DELETE'
+              });
+            } catch (err) {
+              console.error('Error deleting slide from backend:', err);
+            }
+          }
+        });
+        
+        // Remove slides from frontend state
+        setSlides(prev => prev.filter(slide => !songToDelete.slideIds.includes(slide.id)));
+        
+        // Remove from frontend state
+        setSongsList(prev => prev.filter(song => song.title !== itemTitle));
+        
+        // Remove from backend
+        if (backendConnected) {
+          fetch(`http://localhost:5001/api/songs/${songToDelete.id}`, {
+            method: 'DELETE'
+          }).catch(err => console.error('Error deleting song from backend:', err));
+        }
+        
+        // Clear localStorage content for this song
+        localStorage.removeItem(`song-lyrics-${songToDelete.id}`);
+        
+        if (selectedSong?.title === itemTitle) {
+          setSelectedSong(null);
+          setSongsContent('');
+        }
       }
     } else if (activeModule === 'sermons') {
-      setSermonsList(prev => prev.filter(sermon => sermon.title !== itemTitle));
-      if (selectedSermon?.title === itemTitle) {
-        setSelectedSermon(null);
-        setSermonsContent('');
+      const sermonToDelete = sermonsList.find(sermon => sermon.title === itemTitle);
+      if (sermonToDelete) {
+        // Delete associated slides first
+        const slidesToDelete = slides.filter(slide => sermonToDelete.slideIds.includes(slide.id));
+        slidesToDelete.forEach(async (slide) => {
+          // Delete from backend
+          if (backendConnected) {
+            try {
+              await fetch(`http://localhost:5001/api/slides/${slide.id}`, {
+                method: 'DELETE'
+              });
+            } catch (err) {
+              console.error('Error deleting slide from backend:', err);
+            }
+          }
+        });
+        
+        // Remove slides from frontend state
+        setSlides(prev => prev.filter(slide => !sermonToDelete.slideIds.includes(slide.id)));
+        
+        // Remove from frontend state
+        setSermonsList(prev => prev.filter(sermon => sermon.title !== itemTitle));
+        
+        // Remove from backend
+        if (backendConnected) {
+          fetch(`http://localhost:5001/api/sermons/${sermonToDelete.id}`, {
+            method: 'DELETE'
+          }).catch(err => console.error('Error deleting sermon from backend:', err));
+        }
+        
+        // Clear localStorage content for this sermon
+        localStorage.removeItem(`sermon-notes-${sermonToDelete.id}`);
+        
+        if (selectedSermon?.title === itemTitle) {
+          setSelectedSermon(null);
+          setSermonsContent('');
+        }
       }
     } else if (activeModule === 'asset-decks') {
-      setAssetDecksList(prev => prev.filter(deck => deck.title !== itemTitle));
-      if (selectedAssetDeck?.title === itemTitle) {
-        setSelectedAssetDeck(null);
-        setEditingSlide(null);
-        setCurrentSlideIndex(0);
+      const deckToDelete = assetDecksList.find(deck => deck.title === itemTitle);
+      if (deckToDelete) {
+        // Delete associated slides first
+        const slidesToDelete = slides.filter(slide => deckToDelete.slideIds.includes(slide.id));
+        slidesToDelete.forEach(async (slide) => {
+          // Delete from backend
+          if (backendConnected) {
+            try {
+              await fetch(`http://localhost:5001/api/slides/${slide.id}`, {
+                method: 'DELETE'
+              });
+            } catch (err) {
+              console.error('Error deleting slide from backend:', err);
+            }
+          }
+        });
+        
+        // Remove slides from frontend state
+        setSlides(prev => prev.filter(slide => !deckToDelete.slideIds.includes(slide.id)));
+        
+        // Remove from frontend state
+        setAssetDecksList(prev => prev.filter(deck => deck.title !== itemTitle));
+        
+        // Remove from backend
+        if (backendConnected) {
+          fetch(`http://localhost:5001/api/asset-decks/${deckToDelete.id}`, {
+            method: 'DELETE'
+          }).catch(err => console.error('Error deleting asset deck from backend:', err));
+        }
+        
+        if (selectedAssetDeck?.title === itemTitle) {
+          setSelectedAssetDeck(null);
+          setEditingSlide(null);
+          setCurrentSlideIndex(0);
+        }
       }
     }
     // Remove from backgrounds list if it was there
     setItemsWithBackgrounds(prev => prev.filter(item => item !== itemTitle));
   };
+
+  // Function to clear all orphaned slides (slides that don't belong to any collection)
+  const clearOrphanedSlides = () => {
+    // Get all slide IDs that belong to collections
+    const allCollectionSlideIds = new Set<string>();
+    
+    songsList.forEach(song => {
+      song.slideIds.forEach(id => allCollectionSlideIds.add(id));
+    });
+    
+    sermonsList.forEach(sermon => {
+      sermon.slideIds.forEach(id => allCollectionSlideIds.add(id));
+    });
+    
+    assetDecksList.forEach(deck => {
+      deck.slideIds.forEach(id => allCollectionSlideIds.add(id));
+    });
+    
+    // Find orphaned slides (slides that don't belong to any collection)
+    const orphanedSlides = slides.filter(slide => !allCollectionSlideIds.has(slide.id));
+    
+    if (orphanedSlides.length > 0) {
+      // Delete orphaned slides from backend
+      orphanedSlides.forEach(async (slide) => {
+        if (backendConnected) {
+          try {
+            await fetch(`http://localhost:5001/api/slides/${slide.id}`, {
+              method: 'DELETE'
+            });
+          } catch (err) {
+            console.error('Error deleting orphaned slide from backend:', err);
+          }
+        }
+      });
+      
+      // Remove orphaned slides from frontend state
+      setSlides(prev => prev.filter(slide => allCollectionSlideIds.has(slide.id)));
+      
+      console.log(`Cleared ${orphanedSlides.length} orphaned slides`);
+    }
+  };
+
+  // Function to clear all slides when there are no collections
+  const clearAllSlides = () => {
+    if (songsList.length === 0 && sermonsList.length === 0 && assetDecksList.length === 0) {
+      // Delete all slides from backend
+      slides.forEach(async (slide) => {
+        if (backendConnected) {
+          try {
+            await fetch(`http://localhost:5001/api/slides/${slide.id}`, {
+              method: 'DELETE'
+            });
+          } catch (err) {
+            console.error('Error deleting slide from backend:', err);
+          }
+        }
+      });
+      
+      // Clear all slides from frontend state
+      setSlides([]);
+      
+      console.log('Cleared all slides - no collections exist');
+    }
+  };
+
+
 
   const handleSelectBackground = (itemTitle: string) => {
     setBackgroundTargetItem(itemTitle);
@@ -1269,6 +1722,9 @@ function App() {
         });
         setSlides(updatedSlides);
         setCollectionsWithBackgrounds(prev => [...prev, backgroundTargetCollection]);
+        
+        // Update cached slides after applying background
+        setTimeout(() => updateCachedSlides(), 0);
       } else if (sermon) {
         const updatedSlides = slides.map(slide => {
           if (sermon.slideIds.includes(slide.id)) {
@@ -1283,6 +1739,9 @@ function App() {
         });
         setSlides(updatedSlides);
         setCollectionsWithBackgrounds(prev => [...prev, backgroundTargetCollection]);
+        
+        // Update cached slides after applying background
+        setTimeout(() => updateCachedSlides(), 0);
       } else if (assetDeck) {
         const updatedSlides = slides.map(slide => {
           if (assetDeck.slideIds.includes(slide.id)) {
@@ -1297,6 +1756,9 @@ function App() {
         });
         setSlides(updatedSlides);
         setCollectionsWithBackgrounds(prev => [...prev, backgroundTargetCollection]);
+        
+        // Update cached slides after applying background
+        setTimeout(() => updateCachedSlides(), 0);
       }
       setMyMediaModalOpen(false);
       setBackgroundTargetCollection(null);
@@ -1380,6 +1842,165 @@ function App() {
   // Presentation tab state
   const [selectedPresentationFlow, setSelectedPresentationFlow] = useState<IFlow | null>(null);
   const [activeSlide, setActiveSlide] = useState<ISlide | null>(null);
+
+  // Clear cached slides from localStorage
+  const clearCachedSlides = () => {
+    localStorage.removeItem('cached-flow-slides');
+    console.log('Cleared cached slides from localStorage');
+  };
+
+  // Check if cached slides are available for the current flow
+  const hasCachedSlides = () => {
+    try {
+      const cachedSlides = localStorage.getItem('cached-flow-slides');
+      return cachedSlides && JSON.parse(cachedSlides).length > 0;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  // Update cached slides with current slide state
+  const updateCachedSlides = () => {
+    if (!selectedPresentationFlow) return;
+    
+    try {
+      const sortedFlowItems = selectedPresentationFlow.flowItems.sort((a, b) => a.order - b.order);
+      const updatedCachedSlides: ISlide[] = [];
+      
+      sortedFlowItems.forEach((item) => {
+        if (item.type === 'collection') {
+          const song = songsList.find(s => s.id === item.id);
+          const sermon = sermonsList.find(s => s.id === item.id);
+          const assetDeck = assetDecksList.find(a => a.id === item.id);
+          
+          if (song) {
+            const songSlides = slides.filter(slide => song.slideIds.includes(slide.id));
+            updatedCachedSlides.push(...songSlides);
+          } else if (sermon) {
+            const sermonSlides = slides.filter(slide => sermon.slideIds.includes(slide.id));
+            updatedCachedSlides.push(...sermonSlides);
+          } else if (assetDeck) {
+            const assetSlides = slides.filter(slide => assetDeck.slideIds.includes(slide.id));
+            updatedCachedSlides.push(...assetSlides);
+          }
+        }
+      });
+      
+      localStorage.setItem('cached-flow-slides', JSON.stringify(updatedCachedSlides));
+      console.log('Updated cached slides:', updatedCachedSlides.length);
+    } catch (error) {
+      console.error('Error updating cached slides:', error);
+    }
+  };
+
+  // Pre-render slides for all collections in a flow and cache them in localStorage
+  const preRenderFlowSlides = (flow: IFlow) => {
+    console.log('Pre-rendering slides for flow:', flow.title);
+    
+    // Clear any existing cached slides
+    localStorage.removeItem('cached-flow-slides');
+    
+    const sortedFlowItems = flow.flowItems.sort((a, b) => a.order - b.order);
+    const cachedSlides: ISlide[] = [];
+    
+    sortedFlowItems.forEach((item) => {
+      if (item.type === 'collection') {
+        const song = songsList.find(s => s.id === item.id);
+        const sermon = sermonsList.find(s => s.id === item.id);
+        const assetDeck = assetDecksList.find(a => a.id === item.id);
+        
+        if (song) {
+          // Get slides for this song
+          const songSlides = slides.filter(slide => song.slideIds.includes(slide.id));
+          cachedSlides.push(...songSlides);
+          
+          // Check if song has content but no slides
+          const songContent = localStorage.getItem(`song-lyrics-${song.id}`);
+          if (songContent && songContent.trim() && song.slideIds.length === 0) {
+            console.log(`Pre-rendering slides for song: ${song.title}`);
+            generateSlidesFromLyrics(songContent, song);
+          }
+        } else if (sermon) {
+          // Get slides for this sermon
+          const sermonSlides = slides.filter(slide => sermon.slideIds.includes(slide.id));
+          cachedSlides.push(...sermonSlides);
+          
+          // Check if sermon has content but no slides
+          const sermonContent = localStorage.getItem(`sermon-notes-${sermon.id}`);
+          if (sermonContent && sermonContent.trim() && sermon.slideIds.length === 0) {
+            console.log(`Pre-rendering slides for sermon: ${sermon.title}`);
+            generateSlidesFromSermon(sermonContent, sermon);
+          }
+        } else if (assetDeck) {
+          // Get slides for this asset deck
+          const assetSlides = slides.filter(slide => assetDeck.slideIds.includes(slide.id));
+          cachedSlides.push(...assetSlides);
+        }
+      }
+    });
+    
+    // Cache the slides in localStorage for zero-lag presentation
+    try {
+      localStorage.setItem('cached-flow-slides', JSON.stringify(cachedSlides));
+      console.log(`Cached ${cachedSlides.length} slides for flow: ${flow.title}`);
+    } catch (error) {
+      console.error('Error caching slides to localStorage:', error);
+    }
+  };
+
+  const updateFlowSlides = (flow: IFlow) => {
+    console.log('Updating slides for flow with latest changes:', flow.title);
+    
+    // Clear any existing cached slides
+    localStorage.removeItem('cached-flow-slides');
+    
+    const sortedFlowItems = flow.flowItems.sort((a, b) => a.order - b.order);
+    const cachedSlides: ISlide[] = [];
+    
+    sortedFlowItems.forEach((item) => {
+      if (item.type === 'collection') {
+        const song = songsList.find(s => s.id === item.id);
+        const sermon = sermonsList.find(s => s.id === item.id);
+        const assetDeck = assetDecksList.find(a => a.id === item.id);
+        
+        if (song) {
+          // Always regenerate slides for songs to pick up lyric changes
+          const songContent = localStorage.getItem(`song-lyrics-${song.id}`);
+          if (songContent && songContent.trim()) {
+            console.log(`Regenerating slides for song: ${song.title}`);
+            generateSlidesFromLyrics(songContent, song);
+          }
+          
+          // Get updated slides for this song
+          const songSlides = slides.filter(slide => song.slideIds.includes(slide.id));
+          cachedSlides.push(...songSlides);
+        } else if (sermon) {
+          // Always regenerate slides for sermons to pick up note changes
+          const sermonContent = localStorage.getItem(`sermon-notes-${sermon.id}`);
+          if (sermonContent && sermonContent.trim()) {
+            console.log(`Regenerating slides for sermon: ${sermon.title}`);
+            generateSlidesFromSermon(sermonContent, sermon);
+          }
+          
+          // Get updated slides for this sermon
+          const sermonSlides = slides.filter(slide => sermon.slideIds.includes(slide.id));
+          cachedSlides.push(...sermonSlides);
+        } else if (assetDeck) {
+          // Get slides for this asset deck (no regeneration needed)
+          const assetSlides = slides.filter(slide => assetDeck.slideIds.includes(slide.id));
+          cachedSlides.push(...assetSlides);
+        }
+      }
+    });
+    
+    // Cache the updated slides in localStorage
+    try {
+      localStorage.setItem('cached-flow-slides', JSON.stringify(cachedSlides));
+      console.log(`Updated and cached ${cachedSlides.length} slides for flow: ${flow.title}`);
+    } catch (error) {
+      console.error('Error caching updated slides to localStorage:', error);
+    }
+  };
   const [selectedCollection, setSelectedCollection] = useState<{
     type: 'collection' | 'note';
     id: string;
@@ -1415,64 +2036,160 @@ function App() {
 
   // Keyboard navigation for Presentation tab
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (activeModule !== 'presentation' || !selectedPresentationFlow) return;
-    
+    console.log('🎹 Keyboard event:', event.key, 'Module:', activeModule, 'Flow:', selectedPresentationFlow?.title);
+
+    // Ignore typing in inputs or editable areas
+    const target = event.target as HTMLElement | null;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) {
+      return;
+    }
+
+    if (activeModule !== 'presentation' || !selectedPresentationFlow) {
+      console.log('❌ Keyboard navigation disabled - not in presentation mode or no flow selected');
+      return;
+    }
+
     const activeSlide = getActiveSlide();
-    if (!activeSlide) return;
-    
-    // Get all slides from the current flow
-    const allFlowSlides: ISlide[] = [];
-    const sortedFlowItems = selectedPresentationFlow.flowItems.sort((a, b) => a.order - b.order);
-    
-    sortedFlowItems.forEach((item) => {
+    if (!activeSlide) {
+      console.log('❌ No active slide to navigate from');
+      return;
+    }
+
+    console.log('🎯 Current active slide:', activeSlide.title, 'ID:', activeSlide.id);
+
+    // Find the current collection and its slides for grid-based navigation
+    let currentCollectionSlides: ISlide[] = [];
+    let currentSlideIndex = -1;
+
+    // Search through all flow items to find which collection contains the active slide
+    for (const item of selectedPresentationFlow.flowItems) {
       if (item.type === 'collection') {
         const song = songsList.find(s => s.id === item.id);
         const sermon = sermonsList.find(s => s.id === item.id);
         const assetDeck = assetDecksList.find(a => a.id === item.id);
-        
+
+        let collectionSlides: ISlide[] = [];
         if (song) {
-          const songSlides = slides.filter(slide => song.slideIds.includes(slide.id));
-          allFlowSlides.push(...songSlides);
+          collectionSlides = slides.filter(slide => song.slideIds.includes(slide.id));
         } else if (sermon) {
-          const sermonSlides = slides.filter(slide => sermon.slideIds.includes(slide.id));
-          allFlowSlides.push(...sermonSlides);
+          collectionSlides = slides.filter(slide => sermon.slideIds.includes(slide.id));
         } else if (assetDeck) {
-          const assetSlides = slides.filter(slide => assetDeck.slideIds.includes(slide.id));
-          allFlowSlides.push(...assetSlides);
+          collectionSlides = slides.filter(slide => assetDeck.slideIds.includes(slide.id));
+        }
+
+        // Check if the active slide is in this collection
+        const slideIndex = collectionSlides.findIndex(slide => slide.id === activeSlide.id);
+        if (slideIndex !== -1) {
+          currentCollectionSlides = collectionSlides;
+          currentSlideIndex = slideIndex;
+          console.log(`📍 Found active slide in collection: ${item.id}, slide ${slideIndex + 1} of ${collectionSlides.length}`);
+          break;
         }
       }
-    });
-    
-    const currentIndex = allFlowSlides.findIndex(slide => slide.id === activeSlide.id);
-    
+    }
+
+    if (currentSlideIndex === -1) {
+      console.warn('⚠️ Current slide not found in any collection');
+      return;
+    }
+
+    console.log('📋 Current collection has', currentCollectionSlides.length, 'slides');
+
     switch (event.key) {
       case 'ArrowLeft':
-      case 'ArrowUp':
         event.preventDefault();
-        if (currentIndex > 0) {
-          handleSlideActivation(allFlowSlides[currentIndex - 1]);
+        console.log('⬅️ Navigating to slide on the left...');
+        if (currentSlideIndex > 0) {
+          const leftSlide = currentCollectionSlides[currentSlideIndex - 1];
+          console.log('✅ Activating left slide:', leftSlide.title);
+          handleSlideActivation(leftSlide);
+        } else {
+          console.log('❌ Already at leftmost slide');
         }
         break;
       case 'ArrowRight':
+        event.preventDefault();
+        console.log('➡️ Navigating to slide on the right...');
+        if (currentSlideIndex < currentCollectionSlides.length - 1) {
+          const rightSlide = currentCollectionSlides[currentSlideIndex + 1];
+          console.log('✅ Activating right slide:', rightSlide.title);
+          handleSlideActivation(rightSlide);
+        } else {
+          console.log('❌ Already at rightmost slide');
+        }
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        console.log('⬆️ Navigating to slide above...');
+        if (currentSlideIndex > 0) {
+          const upSlide = currentCollectionSlides[currentSlideIndex - 1];
+          console.log('✅ Activating slide above:', upSlide.title);
+          handleSlideActivation(upSlide);
+        }
+        break;
       case 'ArrowDown':
+        event.preventDefault();
+        console.log('⬇️ Navigating to slide below...');
+        if (currentSlideIndex < currentCollectionSlides.length - 1) {
+          const downSlide = currentCollectionSlides[currentSlideIndex + 1];
+          console.log('✅ Activating slide below:', downSlide.title);
+          handleSlideActivation(downSlide);
+        }
+        break;
       case ' ':
         event.preventDefault();
-        if (currentIndex < allFlowSlides.length - 1) {
-          handleSlideActivation(allFlowSlides[currentIndex + 1]);
+        console.log('␣ Spacebar - navigating to next slide...');
+        if (currentSlideIndex < currentCollectionSlides.length - 1) {
+          const nextSlide = currentCollectionSlides[currentSlideIndex + 1];
+          console.log('✅ Activating next slide:', nextSlide.title);
+          handleSlideActivation(nextSlide);
         }
+        break;
+      default:
         break;
     }
   };
 
   // Add keyboard event listener
   useEffect(() => {
-    if (activeModule === 'presentation') {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.removeEventListener('keydown', handleKeyDown);
-      };
+    if (activeModule !== 'presentation') return;
+    const listener = (e: KeyboardEvent) => handleKeyDown(e);
+    document.addEventListener('keydown', listener);
+    return () => document.removeEventListener('keydown', listener);
+  }, [activeModule, selectedPresentationFlow, slides, songsList, sermonsList, assetDecksList, activeSlide]);
+
+  // Cleanup cached slides when app closes or module changes
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      clearCachedSlides();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        clearCachedSlides();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // Update cached slides when slides change in presentation mode
+  useEffect(() => {
+    if (activeModule === 'presentation' && selectedPresentationFlow && hasCachedSlides()) {
+      // Debounce the cache update to avoid excessive updates
+      const timeoutId = setTimeout(() => {
+        updateCachedSlides();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [activeModule, selectedPresentationFlow, slides, songsList, sermonsList, assetDecksList]);
+  }, [slides, activeModule, selectedPresentationFlow]);
 
   // Auto-cycle state for collections
   const [autoCycleStates, setAutoCycleStates] = useState<{ [key: string]: boolean }>({});
@@ -1570,6 +2287,9 @@ function App() {
         return slide;
       });
       setSlides(updatedSlides);
+      
+      // Update cached slides after removing background
+      setTimeout(() => updateCachedSlides(), 0);
     } else if (sermon) {
       const updatedSlides = slides.map(slide => {
         if (sermon.slideIds.includes(slide.id)) {
@@ -1581,6 +2301,9 @@ function App() {
         return slide;
       });
       setSlides(updatedSlides);
+      
+      // Update cached slides after removing background
+      setTimeout(() => updateCachedSlides(), 0);
     } else if (assetDeck) {
       const updatedSlides = slides.map(slide => {
         if (assetDeck.slideIds.includes(slide.id)) {
@@ -1592,6 +2315,9 @@ function App() {
         return slide;
       });
       setSlides(updatedSlides);
+      
+      // Update cached slides after removing background
+      setTimeout(() => updateCachedSlides(), 0);
     }
 
     setCollectionsWithBackgrounds(prev => prev.filter(id => id !== collectionId));
@@ -1870,7 +2596,7 @@ function App() {
           
           {/* SlideThumbnailList as popout overlay */}
           <SlideThumbnailList
-            slides={slides.filter(slide => selectedAssetDeck?.slideIds.includes(slide.id) || !selectedAssetDeck)}
+            slides={selectedAssetDeck ? slides.filter(slide => selectedAssetDeck.slideIds.includes(slide.id)) : []}
             onEdit={handleEdit}
             onDelete={handleDelete}
             title={selectedAssetDeck?.title || "Asset Deck Slides"}
@@ -1893,18 +2619,35 @@ function App() {
 
           {/* Songs: TextEditor as primary workspace */}
           <main className="App-main">
-            <div className="text-editor-workspace">
-              <TextEditor
-                onSave={handleSongsSave}
-                placeholder="Start writing your song lyrics..."
-                title={selectedSong ? selectedSong.title : "Song Editor"}
-                storageKey={selectedSong ? `song-lyrics-${selectedSong.id}` : 'songs-content'}
-              />
-            </div>
+            {selectedSong ? (
+              <div className="text-editor-workspace">
+                <TextEditor
+                  onSave={handleSongsSave}
+                  placeholder="Start writing your song lyrics..."
+                  title={selectedSong.title}
+                  storageKey={`song-lyrics-${selectedSong.id}`}
+                />
+              </div>
+            ) : (
+              <div className="songs-welcome">
+                <div className="welcome-content">
+                  <h2>Welcome to Songs</h2>
+                  <p>Select a song from the sidebar to start editing lyrics, or create a new song to get started.</p>
+                  <div className="welcome-actions">
+                    <button 
+                      className="welcome-button"
+                      onClick={handleMakeNewSong}
+                    >
+                      Create New Song
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </main>
           {/* SlideThumbnailList as popout overlay for Songs */}
           <SlideThumbnailList
-            slides={slides.filter(slide => selectedSong?.slideIds.includes(slide.id) || !selectedSong)}
+            slides={selectedSong ? slides.filter(slide => selectedSong.slideIds.includes(slide.id)) : []}
             onEdit={handleEdit}
             title={selectedSong?.title || "Songs"}
           />
@@ -2301,7 +3044,7 @@ function App() {
                   return slides.filter(slide => collection.slideIds.includes(slide.id));
                 }
               }
-              return slides;
+              return [];
             })()}
             onEdit={handleEdit}
             onDelete={handleDelete}
@@ -2331,32 +3074,49 @@ function App() {
 
           {/* Sermons: TextEditor as primary workspace */}
           <main className="App-main">
-            <div className="text-editor-workspace">
-              <TextEditor
-                onSave={handleSermonsSave}
-                placeholder="Start writing your sermon notes..."
-                title={selectedSermon ? selectedSermon.title : "Sermon Editor"}
-                storageKey={selectedSermon ? `sermon-notes-${selectedSermon.id}` : 'sermons-content'}
-                onMakeSlide={handleMakeSermonSlide}
-                showMakeSlideButton={true}
-                onClearSlides={handleClearSermonSlides}
-                showClearSlidesButton={true}
-                onPreachMode={handlePreachMode}
-                showPreachButton={true}
-                isPreachMode={isPreachMode}
-                onSlideButtonClick={isPreachMode ? (slideId: string) => {
-                  const slide = slides.find(s => s.id === slideId);
-                  if (slide) {
-                    handleSlideActivation(slide);
-                  }
-                } : undefined}
-                activeSlideId={activeSlide?.id}
-              />
-            </div>
+            {selectedSermon ? (
+              <div className="text-editor-workspace">
+                <TextEditor
+                  onSave={handleSermonsSave}
+                  placeholder="Start writing your sermon notes..."
+                  title={selectedSermon.title}
+                  storageKey={`sermon-notes-${selectedSermon.id}`}
+                  onMakeSlide={handleMakeSermonSlide}
+                  showMakeSlideButton={true}
+                  onClearSlides={handleClearSermonSlides}
+                  showClearSlidesButton={true}
+                  onPreachMode={handlePreachMode}
+                  showPreachButton={true}
+                  isPreachMode={isPreachMode}
+                  onSlideButtonClick={isPreachMode ? (slideId: string) => {
+                    const slide = slides.find(s => s.id === slideId);
+                    if (slide) {
+                      handleSlideActivation(slide);
+                    }
+                  } : undefined}
+                  activeSlideId={activeSlide?.id}
+                />
+              </div>
+            ) : (
+              <div className="sermons-welcome">
+                <div className="welcome-content">
+                  <h2>Welcome to Sermons</h2>
+                  <p>Select a sermon from the sidebar to start editing notes, or create a new sermon to get started.</p>
+                  <div className="welcome-actions">
+                    <button 
+                      className="welcome-button"
+                      onClick={handleMakeNewSermon}
+                    >
+                      Create New Sermon
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </main>
           {/* SlideThumbnailList as popout overlay for Sermons */}
           <SlideThumbnailList
-            slides={slides.filter(slide => selectedSermon?.slideIds.includes(slide.id) || !selectedSermon)}
+            slides={selectedSermon ? slides.filter(slide => selectedSermon.slideIds.includes(slide.id)) : []}
             onEdit={handleEdit}
             onSlideClick={isPreachMode ? handleSlideActivation : undefined}
             title={selectedSermon?.title || "Sermons"}
@@ -2375,9 +3135,9 @@ function App() {
           />
 
           <main className="App-main">
-            {/* Fixed Slide Thumbnails */}
+            {/* Fixed Slide Thumbnails - only show when a collection is selected */}
             <SlideThumbnailList
-              slides={slides}
+              slides={[]}
               onEdit={handleEdit}
               onDelete={handleDelete}
               title="Slides"
@@ -2473,6 +3233,9 @@ function App() {
                         // Only set the flow if it's not already selected
                         const isCurrentlySelected = selectedPresentationFlow && (selectedPresentationFlow as IFlow).id === flow.id;
                         if (!isCurrentlySelected) {
+                          // Clear cached slides from previous flow
+                          clearCachedSlides();
+                          
                           setSelectedPresentationFlow(flow);
                           setActiveSlide(null);
                           // Clear active state from all slides when flow changes
@@ -2483,6 +3246,9 @@ function App() {
                             })
                           }));
                           setSlides(clearedSlides);
+                          
+                          // Pre-render slides for all collections in this flow
+                          preRenderFlowSlides(flow);
                         }
                       }}
                     >
@@ -2498,6 +3264,9 @@ function App() {
                   <button 
                     className="back-button"
                     onClick={() => {
+                      // Clear cached slides when going back to flows list
+                      clearCachedSlides();
+                      
                       setSelectedPresentationFlow(null);
                       setActiveSlide(null);
                       // Clear active state from all slides when going back
@@ -2763,16 +3532,16 @@ function App() {
                     onClick={handleConnectToSecondDisplay}
                     title={isConnectedToSecondDisplay ? 'Disconnect from second display' : 'Connect to second display'}
                   >
-                    {isConnectedToSecondDisplay ? '🔌 Disconnect' : '🔗 Connect'}
+                    {isConnectedToSecondDisplay ? 'Connected' : 'Disconnected'}
                   </button>
                 </div>
               </div>
             ) : (
               <div className="active-slide-placeholder">
-                <div className="placeholder-content">
-                  <h3>Active Slide</h3>
-                  <p>Click on a slide to preview it here</p>
-                </div>
+                                  <div className="placeholder-content">
+                    <h3>Active Slide</h3>
+                    <p>Click on a slide to preview it here</p>
+                  </div>
               </div>
             )}
           </div>

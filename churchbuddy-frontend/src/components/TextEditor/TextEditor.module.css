@@ -18,27 +18,7 @@
   background: rgba(102, 126, 234, 0.15);
   border: 1px solid rgba(102, 126, 234, 0.3);
   box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
-}
-
-.preachModeHeader {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 16px;
-  background: rgba(102, 126, 234, 0.2);
-  border-bottom: 1px solid rgba(102, 126, 234, 0.3);
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
-  gap: 8px;
-}
-
-.preachModeHeader.visible {
-  display: flex;
-}
-
-.preachModeHeader .icon {
-  font-size: 16px;
+  transition: all 0.3s ease;
 }
 
 .toolbar {
@@ -60,16 +40,28 @@
 .preachModeMessage {
   display: flex;
   align-items: center;
-  padding: 8px 16px;
+  padding: 6px 10px;
   background: rgba(102, 126, 234, 0.15);
   border: 1px solid rgba(102, 126, 234, 0.3);
-  border-radius: 8px;
+  border-radius: 6px;
   color: white;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
-  gap: 8px;
-  margin-right: 16px;
+  gap: 6px;
+  margin-left: 8px;
+  box-shadow: 0 1px 3px rgba(102, 126, 234, 0.2);
+  white-space: nowrap;
+  max-width: 200px; /* More compact */
+  transition: all 0.2s ease;
 }
+
+.preachModeMessage:hover {
+  background: rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.4);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25);
+}
+
+
 
 .toolbarLeft {
   display: flex;
@@ -82,6 +74,8 @@
   display: flex;
   align-items: center;
   gap: 8px; /* Space between font controls */
+  flex-wrap: wrap; /* Allow wrapping if needed */
+  justify-content: flex-end; /* Align items to the right */
 }
 
 .toolGroup {
@@ -224,7 +218,10 @@
   position: relative;
   margin-bottom: 50vh;
   min-height: 1104px;
+  transition: all 0.3s ease;
 }
+
+
 
 .editor {
   outline: none;
@@ -239,6 +236,7 @@
   font-family: 'Roboto', sans-serif;
   color: #333;
   tab-size: 2;
+  text-align: left; /* Override the global center alignment */
 }
 
 .editor.preachMode {
@@ -246,6 +244,29 @@
   -webkit-user-select: none; /* For Safari */
   cursor: default; /* Change cursor to default arrow */
   caret-color: transparent; /* Hide text input caret */
+  color: #333; /* Keep black text in preach mode */
+  position: relative;
+}
+
+
+
+/* Ensure slide buttons remain clickable in preach mode */
+.editor.preachMode :global(.slide-button) {
+  cursor: pointer !important;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: auto;
+  background: rgba(102, 126, 234, 0.15) !important;
+  border: 2px solid rgba(102, 126, 234, 0.4) !important;
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2) !important;
+  transition: all 0.2s ease;
+}
+
+.editor.preachMode :global(.slide-button:hover) {
+  background: rgba(102, 126, 234, 0.25) !important;
+  border-color: rgba(102, 126, 234, 0.6) !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+  transform: translateY(-1px);
 }
 
 .editor:focus {

@@ -27,8 +27,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
 
   // Update HTML when slide changes
   React.useEffect(() => {
-    console.log('=== MODAL OPENED - LOADING SLIDE HTML ===');
-    console.log('Original slide HTML:', slide.html);
+
     
     // Clean any existing handles or duplicates from the loaded HTML
     let cleanInitialHtml = slide.html;
@@ -42,14 +41,12 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     const elementIds = new Set();
     cleanInitialHtml = cleanInitialHtml.replace(/<(h[1-6]|p|div)[^>]*id="([^"]+)"[^>]*>.*?<\/\1>/gi, (match, tag, id) => {
       if (elementIds.has(id)) {
-        console.log('Removing duplicate element from initial HTML, ID:', id);
         return ''; // Remove duplicate
       }
       elementIds.add(id);
       return match; // Keep first occurrence
     });
     
-    console.log('Cleaned initial HTML:', cleanInitialHtml);
     setCurrentSlideHtml(cleanInitialHtml);
     
     // Detect background via HTML comment
@@ -88,7 +85,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
             // Prevent default browser behavior
             e.preventDefault();
             
-            console.log('Deleting selected element:', selectedElement.tagName);
+
             
             // Remove the element from DOM
             if (selectedElement.parentNode) {
@@ -131,7 +128,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     if (!slideContent) return;
 
     const elements = slideContent.querySelectorAll('h1, h2, h3, h4, h5, h6, p, div, img, iframe');
-    console.log('Initializing z-index for', elements.length, 'elements');
+
     
     elements.forEach((element, index) => {
       const htmlElement = element as HTMLElement;
@@ -139,16 +136,16 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
         // Give each element a default z-index starting from 1
         const defaultZIndex = (index + 1).toString();
         htmlElement.style.zIndex = defaultZIndex;
-        console.log(`Element ${index} (${htmlElement.tagName}) assigned z-index: ${defaultZIndex}`);
+        // Element assigned default z-index
       } else {
-        console.log(`Element ${index} (${htmlElement.tagName}) already has z-index: ${htmlElement.style.zIndex}`);
+        // Element already has z-index
       }
     });
   };
 
   // Add new text box function
   const handleAddTextBox = () => {
-    console.log('=== ADDING NEW TEXT BOX ===');
+
     
     try {
       // Create a new text element with default text "TEXT"
@@ -173,8 +170,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
       const newElementHtml = newTextElement.outerHTML;
       const updatedHtml = currentSlideHtml + newElementHtml;
       
-      console.log('Adding new element to HTML:', newElementHtml);
-      console.log('Updated HTML length:', updatedHtml.length);
+
       
       // Update the state - this will trigger SlideRenderer re-render
       setCurrentSlideHtml(updatedHtml);
@@ -184,15 +180,12 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
         const renderedElement = document.querySelector(`#${newTextElement.id}`) as HTMLElement;
         if (renderedElement) {
           renderedElement.click();
-          console.log('Triggered click on new text element for immediate editing');
         } else {
-          console.log('Could not find rendered element, trying alternative selector');
           // Fallback: find the most recently added h2 element
           const allH2Elements = document.querySelectorAll('[data-slide-id="modal-editor"] h2');
           const lastH2 = allH2Elements[allH2Elements.length - 1] as HTMLElement;
           if (lastH2) {
             lastH2.click();
-            console.log('Triggered click on last h2 element as fallback');
           }
         }
       }, 50); // Shorter timeout since we're not doing DOM manipulation
@@ -212,17 +205,12 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
   };
 
   const handleSelectMedia = (media: any) => {
-    console.log('Selected media:', media);
-    console.log('isSelectingBackground:', isSelectingBackground);
-    
     // Add image to slide or set as background based on context
     if (media.type === 'image') {
       if (isSelectingBackground) {
-        console.log('Adding as background image:', media.url);
         handleSetBackground(media.url);
         setIsSelectingBackground(false);
       } else {
-        console.log('Adding as image element:', media.url);
         handleAddImage(media.url, media.name);
       }
     }
@@ -398,7 +386,7 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
       return;
     }
     
-    console.log('Creating image element:', imageUrl);
+
     
     // Create image element for HTML generation
     const imgElement = document.createElement('img');
@@ -411,6 +399,21 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     imgElement.style.cursor = 'grab';
     imgElement.style.zIndex = '10';
     
+    // Size the image appropriately for the slide dimensions (1920x1080)
+    // Set a reasonable default size that fits within the slide
+    const slideWidth = 1920;
+    const slideHeight = 1080;
+    const maxImageWidth = slideWidth * 0.6; // 60% of slide width
+    const maxImageHeight = slideHeight * 0.6; // 60% of slide height
+    
+    imgElement.style.maxWidth = `${maxImageWidth}px`;
+    imgElement.style.maxHeight = `${maxImageHeight}px`;
+    imgElement.style.width = 'auto';
+    imgElement.style.height = 'auto';
+    imgElement.style.objectFit = 'contain';
+    
+
+    
     // Add the same styling as text elements for edit mode
     imgElement.style.minWidth = '100px';
     imgElement.style.minHeight = '30px';
@@ -420,12 +423,28 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     imgElement.style.borderRadius = '4px';
     imgElement.title = 'Click to select, drag to move';
     
+    // Mark this as a newly added image to prevent initial sizing issues
+    imgElement.dataset.newlyAdded = 'true';
+    
+
+    
     // Update HTML state - this will trigger SlideRenderer re-render
     const newImageHtml = imgElement.outerHTML;
     setCurrentSlideHtml(prev => prev + newImageHtml);
     
     // Note: Image sizing will be handled by the SlideRenderer's edit mode styling
     // The onload handler for natural size will be applied when the image renders
+    
+    // Auto-remove newlyAdded flag after a delay to allow normal resize behavior
+    setTimeout(() => {
+      const slideEditor = document.querySelector('[data-slide-id="modal-editor"]');
+      if (slideEditor) {
+        const newImage = slideEditor.querySelector('img[data-newly-added="true"]') as HTMLElement;
+        if (newImage) {
+          newImage.dataset.newlyAdded = 'false';
+        }
+      }
+    }, 2000); // 2 second delay
   };
 
   // const handleRotateImage = () => {

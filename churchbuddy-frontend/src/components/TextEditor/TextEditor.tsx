@@ -38,7 +38,7 @@ const TextEditor: React.FC<TextEditorProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
 
-  // Effect for event delegation: handle clicks on slide buttons
+  // Effect for event delegation: handle clicks on slide buttons and prevent editing in preach mode
   useEffect(() => {
     const editorElement = editorRef.current;
     if (!editorElement) return;
@@ -56,6 +56,9 @@ const TextEditor: React.FC<TextEditorProps> = ({
           console.log('Calling onSlideButtonClick from event delegation for:', slideId);
           onSlideButtonClick(slideId);
         }
+      } else if (isPreachMode && !slideButton) {
+        // If clicking anywhere else in preach mode (not on a slide button), just prevent editing
+        e.preventDefault();
       }
     };
 
@@ -65,6 +68,8 @@ const TextEditor: React.FC<TextEditorProps> = ({
       editorElement.removeEventListener('click', handleClick);
     };
   }, [onSlideButtonClick, isPreachMode]); // Re-run if these props change
+
+
 
   // Effect to update slide button styling when activeSlideId or preach mode changes
   useEffect(() => {
@@ -328,12 +333,6 @@ const TextEditor: React.FC<TextEditorProps> = ({
         </div>
         
         <div className={styles.toolbarRight}>
-          {isPreachMode && (
-            <div className={styles.preachModeMessage}>
-              📝 Press buttons to set slides as active
-            </div>
-          )}
-          
           {showPreachButton && (
             <button 
               className={styles.toolbarButton}
@@ -342,6 +341,12 @@ const TextEditor: React.FC<TextEditorProps> = ({
             >
               {isPreachMode ? "✏️ Edit" : "📖 Preach"}
             </button>
+          )}
+          
+          {isPreachMode && (
+            <div className={styles.preachModeMessage}>
+              📝 Read-only mode • Click slide buttons
+            </div>
           )}
           
           {!isPreachMode && (
@@ -389,18 +394,18 @@ const TextEditor: React.FC<TextEditorProps> = ({
       {/* Editor Area */}
       <div className={styles.editorArea}>
         <div className={styles.documentContainer}>
-          <div className={styles.document}>
+          <div className={`${styles.document} ${isPreachMode ? styles.preachMode : ''}`}>
             <div
               ref={editorRef}
-              className={`${styles.editor} ${isEditing ? styles.editing : ''}`}
-              contentEditable={true} // Always contentEditable, control interaction via handlers
+              className={`${styles.editor} ${isEditing ? styles.editing : ''} ${isPreachMode ? styles.preachMode : ''}`}
+              contentEditable={!isPreachMode} // Disable contentEditable in preach mode
               onInput={isPreachMode ? undefined : handleTextChange}
               onFocus={isPreachMode ? undefined : handleFocus}
               onBlur={isPreachMode ? undefined : handleBlur}
               onKeyDown={isPreachMode ? undefined : handleKeyDown}
               onPaste={isPreachMode ? undefined : handlePaste}
               suppressContentEditableWarning={true}
-              data-placeholder={placeholder}
+              data-placeholder={isPreachMode ? undefined : placeholder}
               key={storageKey} // Force re-render when storageKey changes
             />
           </div>

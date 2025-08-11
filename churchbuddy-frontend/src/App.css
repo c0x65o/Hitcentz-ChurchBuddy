@@ -1248,7 +1248,9 @@
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  min-width: 120px;
+  height: 40px;
 }
 
 .connect-button:hover {
@@ -1264,6 +1266,8 @@
 .connect-button.connected:hover {
   background: #c53030;
 }
+
+
 
 .active-slide-container {
   display: flex;
@@ -1283,6 +1287,8 @@
   font-weight: 600;
   color: #ffffff;
 }
+
+
 
 .active-slide-content {
   padding: 20px;
@@ -1314,6 +1320,8 @@
   color: #999999;
   font-size: 14px;
 }
+
+
 
 /* Ensure SlideRenderer maintains 16:9 aspect ratio in active slide window */
 .active-slide-content .slide-renderer {

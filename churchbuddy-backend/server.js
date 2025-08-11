@@ -39,6 +39,25 @@ const initDatabase = () => {
         updatedAt TEXT
       )`);
 
+      // Asset Decks table
+      db.run(`CREATE TABLE IF NOT EXISTS asset_decks (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        slideIds TEXT,
+        createdAt TEXT,
+        updatedAt TEXT
+      )`);
+
+      // Flows table
+      db.run(`CREATE TABLE IF NOT EXISTS flows (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        flowItems TEXT,
+        createdAt TEXT,
+        updatedAt TEXT
+      )`);
+
       // Slides table
       db.run(`CREATE TABLE IF NOT EXISTS slides (
         id TEXT PRIMARY KEY,
@@ -214,6 +233,145 @@ app.delete('/api/sermons/:id', (req, res) => {
   });
 });
 
+// Asset Decks endpoints
+app.get('/api/asset-decks', (req, res) => {
+  db.all('SELECT * FROM asset_decks ORDER BY createdAt DESC', (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json(rows.map(row => ({
+      ...row,
+      slideIds: row.slideIds ? JSON.parse(row.slideIds) : [],
+      createdAt: new Date(row.createdAt),
+      updatedAt: new Date(row.updatedAt)
+    })));
+  });
+});
+
+app.post('/api/asset-decks', (req, res) => {
+  const { id, title, description, slideIds } = req.body;
+  const now = new Date().toISOString();
+  
+  db.run(
+    'INSERT INTO asset_decks (id, title, description, slideIds, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, title, description || '', JSON.stringify(slideIds || []), now, now],
+    function(err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json({ 
+        id, 
+        title, 
+        description, 
+        slideIds: slideIds || [],
+        createdAt: new Date(now),
+        updatedAt: new Date(now)
+      });
+    }
+  );
+});
+
+app.put('/api/asset-decks/:id', (req, res) => {
+  const { id } = req.params;
+  const { title, description, slideIds } = req.body;
+  const now = new Date().toISOString();
+  
+  db.run(
+    'UPDATE asset_decks SET title = ?, description = ?, slideIds = ?, updatedAt = ? WHERE id = ?',
+    [title, description || '', JSON.stringify(slideIds || []), now, id],
+    function(err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json({ success: true, updatedAt: new Date(now) });
+    }
+  );
+});
+
+app.delete('/api/asset-decks/:id', (req, res) => {
+  const { id } = req.params;
+  
+  db.run('DELETE FROM asset_decks WHERE id = ?', [id], function(err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({ success: true });
+  });
+});
+
+// Flows endpoints
+app.get('/api/flows', (req, res) => {
+  db.all('SELECT * FROM flows ORDER BY createdAt DESC', (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json(rows.map(row => ({
+      ...row,
+      flowItems: row.flowItems ? JSON.parse(row.flowItems) : [],
+      createdAt: new Date(row.createdAt),
+      updatedAt: new Date(row.updatedAt)
+    })));
+  });
+});
+
+app.post('/api/flows', (req, res) => {
+  const { id, title, flowItems } = req.body;
+  const now = new Date().toISOString();
+  
+  db.run(
+    'INSERT INTO flows (id, title, flowItems, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)',
+    [id, title, JSON.stringify(flowItems || []), now, now],
+    function(err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json({ 
+        id, 
+        title, 
+        flowItems: flowItems || [],
+        createdAt: new Date(now),
+        updatedAt: new Date(now)
+      });
+    }
+  );
+});
+
+app.put('/api/flows/:id', (req, res) => {
+  const { id } = req.params;
+  const { title, flowItems } = req.body;
+  const now = new Date().toISOString();
+  
+  db.run(
+    'UPDATE flows SET title = ?, flowItems = ?, updatedAt = ? WHERE id = ?',
+    [title, JSON.stringify(flowItems || []), now, id],
+    function(err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json({ success: true, updatedAt: new Date(now) });
+    }
+  );
+});
+
+app.delete('/api/flows/:id', (req, res) => {
+  const { id } = req.params;
+  
+  db.run('DELETE FROM flows WHERE id = ?', [id], function(err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({ success: true });
+  });
+});
+
 // Get all slides
 app.get('/api/slides', (req, res) => {
   db.all('SELECT * FROM slides ORDER BY orderNum', (err, rows) => {
@@ -285,9 +443,12 @@ app.post('/api/content', (req, res) => {
   const { itemId, itemType, content, storageKey } = req.body;
   const now = new Date().toISOString();
   
+  // Use a consistent ID based on itemId and storageKey to prevent duplicates
+  const contentId = `content-${itemId}-${storageKey}`;
+  
   db.run(
     'INSERT OR REPLACE INTO content (id, itemId, itemType, content, storageKey, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [`content-${Date.now()}`, itemId, itemType, content, storageKey, now, now],
+    [contentId, itemId, itemType, content, storageKey, now, now],
     function(err) {
       if (err) {
         res.status(500).json({ error: err.message });

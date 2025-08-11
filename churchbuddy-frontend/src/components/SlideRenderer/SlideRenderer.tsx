@@ -29,17 +29,12 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
     const bgMatch = slide.html.match(commentRegex);
     const bgUrl = bgMatch ? bgMatch[1] : null;
     
-    console.log('SlideRenderer - slide HTML:', slide.html);
-    console.log('SlideRenderer - background URL:', bgUrl);
-    
     if (bgUrl) {
-      console.log('SlideRenderer - applying background:', bgUrl);
       containerRef.current.style.backgroundImage = `url(${bgUrl})`;
       containerRef.current.style.backgroundSize = 'cover';
       containerRef.current.style.backgroundPosition = 'center';
       containerRef.current.style.backgroundRepeat = 'no-repeat';
     } else {
-      console.log('SlideRenderer - no background found, clearing');
       containerRef.current.style.backgroundImage = '';
       containerRef.current.style.backgroundSize = '';
       containerRef.current.style.backgroundPosition = '';
@@ -51,15 +46,11 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
   useEffect(() => {
     if (!containerRef.current) return;
 
-    console.log('Video control useEffect - isActive:', isActive, 'slide.html length:', slide.html.length);
-
     // Handle YouTube iframes (background videos)
     const youtubeIframes = containerRef.current.querySelectorAll('iframe[src*="youtube.com"]');
-    console.log('Found YouTube iframes:', youtubeIframes.length);
     
     youtubeIframes.forEach((iframe, index) => {
       const iframeElement = iframe as HTMLIFrameElement;
-      console.log(`Iframe ${index} src:`, iframeElement.src);
       
       if (isActive) {
         // When active, ensure autoplay and unmute
@@ -92,21 +83,21 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
       }
     });
 
-    // Handle native video elements
-    const videoElements = containerRef.current.querySelectorAll('video');
-    videoElements.forEach((video) => {
-      if (isActive) {
-        // When active, unmute and play
-        video.muted = false;
-        video.play().catch((error) => {
-          console.log('Video play failed:', error);
-        });
-      } else {
-        // When not active, pause
-        video.pause();
-      }
-    });
-  }, [isActive, slide.html]);
+         // Handle native video elements
+     const videoElements = containerRef.current.querySelectorAll('video');
+     videoElements.forEach((video) => {
+       if (isActive) {
+         // When active, unmute and play
+         video.muted = false;
+         video.play().catch((error) => {
+           // Silent fail for video control
+         });
+       } else {
+         // When not active, pause
+         video.pause();
+       }
+     });
+   }, [isActive, slide.html]);
 
   // Separate useEffect for edit mode
   useEffect(() => {
@@ -170,7 +161,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             // Fallback to htmlElement if containerRef.current is not available
             htmlElement.appendChild(handle);
           }
-          console.log(`Created corner handle: ${pos.name}`);
         });
         
         // Create edge handles (bars)
@@ -214,7 +204,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             // Fallback to htmlElement if containerRef.current is not available
             htmlElement.appendChild(handle);
           }
-          console.log(`Created edge handle: ${pos.name}`);
         });
         
         // DRAG HANDLE COMMENTED OUT - STARTING FRESH
@@ -311,8 +300,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         } else {
           htmlElement.appendChild(rotateButton);
         }
-        
-        console.log(`Created ${allHandles.length} handles for element:`, htmlElement.tagName);
         
         // Function to position ALL handles relative to container (Canva-style)
         const adjustHandlePositions = () => {
@@ -411,8 +398,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           rotateButton.style.top = `${rotateY}px`;
           rotateButton.style.bottom = 'auto';
           rotateButton.style.transform = 'none';
-          
-          console.log('Positioned ALL handles (Canva-style):', { elementLeft, elementTop, elementWidth, elementHeight });
         };
         
         // Initial positioning of all handles
@@ -607,7 +592,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           
           e.stopPropagation();
           e.preventDefault();
-          console.log('Double-click detected on element:', htmlElement.tagName);
           
           // Make text elements editable on double-click
           if (htmlElement.tagName.match(/^H[1-6]$|^P$|^DIV$/)) {
@@ -658,8 +642,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             
             // Store the handler for cleanup
             htmlElement.dataset.keydownHandler = 'true';
-            
-            console.log('Made element editable on double-click:', htmlElement.tagName);
           }
         };
         
@@ -669,17 +651,13 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           
           e.stopPropagation();
           e.preventDefault();
-          console.log('Click detected on element:', htmlElement.tagName);
           
           // Select this element for toolbar editing
           const allElements = document.querySelectorAll('[data-slide-id="modal-editor"] h1, [data-slide-id="modal-editor"] h2, [data-slide-id="modal-editor"] h3, [data-slide-id="modal-editor"] p, [data-slide-id="modal-editor"] div');
-          console.log('Found', allElements.length, 'elements to deselect');
           allElements.forEach(el => {
             el.classList.remove('selected');
           });
-          htmlElement.classList.add('selected');
-          console.log('Added selected class to element:', htmlElement.tagName);
-          console.log('Element now has selected class:', htmlElement.classList.contains('selected'));
+                      htmlElement.classList.add('selected');
           
           // Don't make editable on single click - only on double-click
           // This allows for drag selection without accidentally entering edit mode
@@ -701,8 +679,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           
           e.stopPropagation();
           e.preventDefault();
-          
-          console.log('Drag start on element:', htmlElement.tagName);
           
           // Get current computed position
           const computedStyle = window.getComputedStyle(htmlElement);
@@ -755,22 +731,32 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             const finalWidth = Math.max(newWidth, minSize);
             const finalHeight = Math.max(newHeight, minSize);
             
-            // For images, set both style and attributes
-            if (htmlElement.tagName === 'IMG') {
-              const imgElement = htmlElement as HTMLImageElement;
-              imgElement.width = finalWidth;
-              imgElement.height = finalHeight;
-              imgElement.style.width = `${finalWidth}px`;
-              imgElement.style.height = `${finalHeight}px`;
-              imgElement.style.setProperty('width', `${finalWidth}px`, 'important');
-              imgElement.style.setProperty('height', `${finalHeight}px`, 'important');
+                    // For images, set both style and attributes
+                  if (htmlElement.tagName === 'IMG') {
+            const imgElement = htmlElement as HTMLImageElement;
+          
+          imgElement.width = finalWidth;
+          imgElement.height = finalHeight;
+          imgElement.style.width = `${finalWidth}px`;
+          imgElement.style.height = `${finalHeight}px`;
+          imgElement.style.setProperty('width', `${finalWidth}px`, 'important');
+          imgElement.style.setProperty('height', `${finalHeight}px`, 'important');
+          
+          // Only remove max-width/max-height constraints if the image has been manually resized
+          // This prevents the initial size constraints from being removed when the image is first added
+          const hasBeenResized = imgElement.dataset.hasBeenResized === 'true';
+          const isNewlyAdded = imgElement.dataset.newlyAdded === 'true';
+          
+                      // Don't remove size constraints for newly added images, even during resize operations
+            if (!isNewlyAdded && hasBeenResized) {
               imgElement.style.setProperty('max-width', 'none', 'important');
               imgElement.style.setProperty('max-height', 'none', 'important');
               imgElement.style.setProperty('object-fit', 'fill', 'important');
-            } else {
-              htmlElement.style.width = `${finalWidth}px`;
-              htmlElement.style.height = `${finalHeight}px`;
             }
+        } else {
+          htmlElement.style.width = `${finalWidth}px`;
+          htmlElement.style.height = `${finalHeight}px`;
+        }
             
             console.log('Resizing element:', htmlElement.tagName, 'to:', finalWidth, 'x', finalHeight);
           } else {
@@ -787,8 +773,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         const handleDragEnd = () => {
           if (!isDragging) return;
           
-          console.log('Drag end on element:', htmlElement.tagName);
-          
           isDragging = false;
           isResizing = false;
           htmlElement.style.cursor = 'grab';
@@ -801,7 +785,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             const finalHeight = htmlElement.style.height;
             htmlElement.dataset.finalWidth = finalWidth;
             htmlElement.dataset.finalHeight = finalHeight;
-            console.log('Stored final dimensions for image:', finalWidth, finalHeight);
+            htmlElement.dataset.hasBeenResized = 'true';
           }
           
           // Save the new position/size
@@ -822,6 +806,11 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         // Create resize handles
         const createResizeHandles = () => {
           if (!editMode) return;
+          
+          // Don't create resize handles for newly added images until they've been interacted with
+          if (htmlElement.tagName === 'IMG' && htmlElement.dataset.newlyAdded === 'true') {
+            return;
+          }
           
           // Generate unique ID for this element
           const elementId = `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -889,7 +878,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             
             // Append to containerRef.current instead of document.body
             containerRef.current?.appendChild(handle);
-            console.log('Added handle to containerRef.current:', handle.className, 'position:', handle.style.top, handle.style.left);
           });
         };
         
@@ -906,16 +894,13 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
 
           // Show handles only for selected elements
           const allElements = document.querySelectorAll('[data-slide-id="modal-editor"] .selected');
-          console.log('Found', allElements.length, 'selected elements');
           allElements.forEach(element => {
             // Find handles for this element by matching data attributes
             const elementHandles = containerRef.current?.querySelectorAll(`.resize-handle[data-element-id="${(element as HTMLElement).dataset.elementId}"]`);
             if (elementHandles) {
-              console.log('Element', element.tagName, 'has', elementHandles.length, 'handles, selected:', element.classList.contains('selected'));
               elementHandles.forEach(handle => {
                 (handle as HTMLElement).style.display = 'block';
                 (handle as HTMLElement).style.opacity = '1';
-                console.log('Showing handle:', handle.className, 'position:', (handle as HTMLElement).style.top, (handle as HTMLElement).style.left);
               });
             }
           });
@@ -924,7 +909,16 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         // Also handle mousedown to ensure click is captured
         const handleMouseDown = (e: Event) => {
           e.stopPropagation();
-          console.log('MouseDown detected on element:', htmlElement.tagName);
+          
+          // Remove newlyAdded flag when image is interacted with
+          if (htmlElement.tagName === 'IMG' && htmlElement.dataset.newlyAdded === 'true') {
+            htmlElement.dataset.newlyAdded = 'false';
+            
+            // Create resize handles for the image now that it's been interacted with
+            setTimeout(() => {
+              createResizeHandles();
+            }, 100);
+          }
           
           // Select this element for toolbar editing
           if (editMode) {
@@ -934,8 +928,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
               el.classList.remove('selected');
             });
             htmlElement.classList.add('selected');
-            console.log('Added selected class to element:', htmlElement.tagName);
-            console.log('Element now has selected class:', htmlElement.classList.contains('selected'));
             
             // Update handle visibility after selection
             setTimeout(() => {
@@ -951,25 +943,21 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         
                 // Simple blur handler to save changes
         const handleBlur = () => {
-          console.log('Text blur - saving changes for element:', htmlElement.tagName);
           try {
             htmlElement.contentEditable = 'false';
-            console.log('Set contentEditable to false for:', htmlElement.tagName);
             
             if (onTextEdit) {
               // Use innerHTML to preserve line breaks and formatting
               const newText = htmlElement.innerHTML || '';
-              console.log('Calling onTextEdit with HTML:', newText);
               onTextEdit(htmlElement, newText);
             }
           } catch (error) {
-            console.error('Error in handleBlur:', error);
+            // Silent fail for text editing
           }
         };
         
         // Handle visibility based on selection
         const updateHandleVisibility = () => {
-          console.log('=== UPDATE HANDLE VISIBILITY ===');
           // Hide all handles first, but only those within the current container
           const allHandles = containerRef.current?.querySelectorAll('.resize-handle');
           allHandles?.forEach(handle => {
@@ -982,11 +970,9 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           if (selectedElement) {
             const elementHandles = containerRef.current?.querySelectorAll(`.resize-handle[data-element-id="${(selectedElement as HTMLElement).dataset.elementId}"]`);
             if (elementHandles) {
-              console.log('Selected element', selectedElement.tagName, 'has', elementHandles.length, 'handles');
               elementHandles.forEach(handle => {
                 (handle as HTMLElement).style.display = 'block';
                 (handle as HTMLElement).style.opacity = '1';
-                console.log('Showing handle:', handle.className, 'position:', (handle as HTMLElement).style.top, (handle as HTMLElement).style.left);
               });
             }
           }
@@ -1004,10 +990,9 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         // DRAG EVENT LISTENERS COMMENTED OUT - STARTING FRESH
         /*
         // Attach interaction handlers to all handles
-        allHandles.forEach(handle => {
-          handle.addEventListener('mousedown', handleInteractionStart);
-          console.log('Attached interaction listener to handle:', handle.dataset.handleName, handle.dataset.handleType);
-        });
+                  allHandles.forEach(handle => {
+            handle.addEventListener('mousedown', handleInteractionStart);
+          });
         */
         
         // Attach editing to the text element and images
@@ -1070,26 +1055,42 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           
           // Handle image constraints and dimension restoration (always, not just in edit mode)
           if (htmlElement.tagName === 'IMG') {
-            // Remove size constraints
-            htmlElement.style.maxWidth = 'none';
-            htmlElement.style.maxHeight = 'none';
-            htmlElement.style.objectFit = 'fill';
-            htmlElement.style.setProperty('max-width', 'none', 'important');
-            htmlElement.style.setProperty('max-height', 'none', 'important');
-            htmlElement.style.setProperty('object-fit', 'fill', 'important');
+            const imgElement = htmlElement as HTMLImageElement;
+            const isNewlyAdded = imgElement.dataset.newlyAdded === 'true';
+            const hasBeenResized = imgElement.dataset.hasBeenResized === 'true';
             
-            // Restore final dimensions if they were stored
-            if (htmlElement.dataset.finalWidth && htmlElement.dataset.finalHeight) {
-              htmlElement.style.width = htmlElement.dataset.finalWidth;
-              htmlElement.style.height = htmlElement.dataset.finalHeight;
-              htmlElement.style.setProperty('width', htmlElement.dataset.finalWidth, 'important');
-              htmlElement.style.setProperty('height', htmlElement.dataset.finalHeight, 'important');
-              console.log('Restored dimensions for image:', htmlElement.dataset.finalWidth, htmlElement.dataset.finalHeight);
+            // Only remove constraints and restore dimensions if the image has been manually resized
+            if (hasBeenResized && !isNewlyAdded) {
+              // Remove size constraints
+              htmlElement.style.maxWidth = 'none';
+              htmlElement.style.maxHeight = 'none';
+              htmlElement.style.objectFit = 'fill';
+              htmlElement.style.setProperty('max-width', 'none', 'important');
+              htmlElement.style.setProperty('max-height', 'none', 'important');
+              htmlElement.style.setProperty('object-fit', 'fill', 'important');
+              
+              // Restore final dimensions if they were stored
+              if (htmlElement.dataset.finalWidth && htmlElement.dataset.finalHeight) {
+                htmlElement.style.width = htmlElement.dataset.finalWidth;
+                htmlElement.style.height = htmlElement.dataset.finalHeight;
+                htmlElement.style.setProperty('width', htmlElement.dataset.finalWidth, 'important');
+                htmlElement.style.setProperty('height', htmlElement.dataset.finalHeight, 'important');
+              }
+            } else if (isNewlyAdded) {
+              // For newly added images, preserve the initial constraints set by SlideEditorModal
+              // and ensure no stored dimensions are applied
+              
+              // Clear any stored dimensions to prevent restoration
+              delete htmlElement.dataset.finalWidth;
+              delete htmlElement.dataset.finalHeight;
+            } else {
+              // For images that are not newly added but also haven't been resized
+              // (e.g., images from previous sessions), preserve their current state
             }
           }
         }
         
-        console.log('Attached event listeners to element:', htmlElement.tagName);
+
         
         // No observer needed - keeping it simple
         
@@ -1097,13 +1098,11 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         if (htmlElement.tagName === 'IFRAME') {
           htmlElement.addEventListener('click', (e) => {
             e.stopPropagation();
-            console.log('Clicked on iframe:', htmlElement.tagName);
           });
         }
         
         // Simple cleanup function
         cleanupFunctions.push(() => {
-          console.log('Cleaning up element:', htmlElement.tagName);
           htmlElement.removeEventListener('click', handleTextClick);
           htmlElement.removeEventListener('dblclick', handleDoubleClick);
           htmlElement.removeEventListener('mousedown', handleMouseDown);
@@ -1164,7 +1163,6 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             handlesToRemove?.forEach(handle => handle.remove());
           }
           
-          console.log('Cleanup complete for element');
         });
       });
 
@@ -1257,14 +1255,22 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
       if (!contentRef.current) return;
 
       const content = contentRef.current;
+      // Remove any inline font-size from slide HTML so wrapper sizing controls text
+      const sanitizedHtml = slide.html.replace(/font-size\s*:\s*[^;"']+;?/gi, '');
+
+      // Compute available area by subtracting wrapper (20px) and inner padding if present
+      const wrapperPadding = 20; // .slideContent padding
+      const paddingMatch = sanitizedHtml.match(/padding\s*:\s*(\d+)px/i);
+      const innerPadding = paddingMatch ? parseInt(paddingMatch[1], 10) : 0;
+      const totalPadding = wrapperPadding + innerPadding; // per side
       
       // Always use fixed 1920x1080 template size
-      const availableWidth = 1920; // Use full width, let CSS padding handle spacing
-      const availableHeight = 1080 - 80; // Keep height constraint for vertical fitting
+      const availableWidth = 1920 - 2 * totalPadding;
+      const availableHeight = 1080 - 2 * totalPadding; // symmetric padding top/bottom
 
       // Create a temporary element for accurate measurement
       const tempElement = document.createElement('div');
-      tempElement.innerHTML = slide.html;
+      tempElement.innerHTML = sanitizedHtml;
       tempElement.style.position = 'absolute';
       tempElement.style.visibility = 'hidden';
       tempElement.style.whiteSpace = 'normal'; // Allow line breaks at word boundaries
@@ -1362,7 +1368,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
               fontSize: `${fontSize}px`,
               visibility: fontSize > 0 ? 'visible' : 'hidden'
             }}
-            dangerouslySetInnerHTML={{ __html: slide.html }}
+            dangerouslySetInnerHTML={{ __html: slide.html.replace(/font-size\s*:\s*[^;"']+;?/gi, '') }}
           />
         )}
       </div>
