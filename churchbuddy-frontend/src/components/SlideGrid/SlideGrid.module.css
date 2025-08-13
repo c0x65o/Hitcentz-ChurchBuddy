@@ -19,21 +19,21 @@
 }
 
 .slideItem:hover {
-  border-color: #667eea;
+  border-color: #555555;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   background: #333333;
 }
 
 .activeSlide {
-  border: 3px solid #667eea !important;
-  box-shadow: 0 0 15px rgba(102, 126, 234, 0.6) !important;
+  border: 3px solid #555555 !important;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.6) !important;
   background: #333333;
 }
 
 .activeSlide:hover {
-  border: 3px solid #667eea !important;
-  box-shadow: 0 0 15px rgba(102, 126, 234, 0.6) !important;
+  border: 3px solid #555555 !important;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.6) !important;
   background: #333333;
 }
 

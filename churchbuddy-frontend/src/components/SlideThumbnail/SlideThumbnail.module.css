@@ -15,13 +15,13 @@
 }
 
 .activeSlide {
-  border: 3px solid #007bff;
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+  border: 3px solid var(--color-primary);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
   transform: translateY(-2px);
 }
 
 .activeSlide:hover {
-  box-shadow: 0 8px 24px rgba(0, 123, 255, 0.6);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.6);
 }
 
 .slideWrapper {

@@ -1277,14 +1277,14 @@ function App() {
             @media print {
               body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
               .header { display: flex; align-items: center; margin-bottom: 20px; }
-              .logo { width: 50px; height: 50px; background: #667eea; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 15px; }
+              .logo { width: 50px; height: 50px; background: #3a3a3a; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 15px; }
               .flow-title { font-size: 24px; font-weight: bold; }
               .flow-subtitle { font-size: 16px; color: #666; margin-top: 5px; }
               .flow-item { 
                 padding: 12px 15px; 
                 margin: 2px 0; 
                 border-radius: 6px; 
-                border-left: 4px solid #667eea;
+                border-left: 4px solid #3a3a3a;
                 background: white;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.1);
               }
@@ -1587,6 +1587,29 @@ function App() {
           setSelectedAssetDeck(null);
           setEditingSlide(null);
           setCurrentSlideIndex(0);
+        }
+      }
+    } else if (activeModule === 'flows') {
+      const flowToDelete = flowsList.find(flow => flow.title === itemTitle);
+      if (flowToDelete) {
+        // Remove from frontend state
+        setFlowsList(prev => prev.filter(flow => flow.title !== itemTitle));
+        
+        // Remove from backend
+        if (backendConnected) {
+          fetch(`http://localhost:5001/api/flows/${flowToDelete.id}`, {
+            method: 'DELETE'
+          }).catch(err => console.error('Error deleting flow from backend:', err));
+        }
+        
+        // Clear selected flow if it was the deleted one
+        if (selectedFlow?.title === itemTitle) {
+          setSelectedFlow(null);
+        }
+        
+        // Clear selected presentation flow if it was the deleted one
+        if (selectedPresentationFlow?.title === itemTitle) {
+          setSelectedPresentationFlow(null);
         }
       }
     }
@@ -2353,13 +2376,13 @@ function App() {
         // Send the active slide data immediately and after load
         newWindow.postMessage({
           type: 'SLIDE_DATA',
-          slide: activeSlide
+          slide: { ...activeSlide, __isActive: true }
         }, '*');
         
         newWindow.addEventListener('load', () => {
           newWindow.postMessage({
             type: 'SLIDE_DATA',
-            slide: activeSlide
+            slide: { ...activeSlide, __isActive: true }
           }, '*');
         });
       } else {
@@ -2375,7 +2398,7 @@ function App() {
       if (activeSlide) {
         secondDisplayWindow.postMessage({
           type: 'SLIDE_DATA',
-          slide: activeSlide
+          slide: { ...activeSlide, __isActive: true }
         }, '*');
       }
     }
@@ -2390,7 +2413,7 @@ function App() {
         if (activeSlide && secondDisplayWindow) {
           secondDisplayWindow.postMessage({
             type: 'SLIDE_DATA',
-            slide: activeSlide
+            slide: { ...activeSlide, __isActive: true }
           }, '*');
         }
       }

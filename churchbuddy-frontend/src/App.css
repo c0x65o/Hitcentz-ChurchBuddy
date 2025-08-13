@@ -1,7 +1,8 @@
 .App {
   text-align: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--color-bg-1);
+  color: var(--color-text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
@@ -11,9 +12,9 @@
   justify-content: space-between; /* Distribute items to ends */
   align-items: center;
   padding: 16px 24px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   position: sticky;
   top: 0;
   z-index: 1000;
@@ -54,7 +55,7 @@
 .tab {
   padding: 12px 24px;
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   color: white;
   font-size: 14px;
@@ -65,14 +66,14 @@
 }
 
 .tab:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
   transform: translateY(-1px);
 }
 
 .tab.active {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: rgba(102, 126, 234, 0.25);
+  border-color: rgba(102, 126, 234, 0.5);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
 }
 
 .App-main {
@@ -897,14 +898,14 @@
 
 .flow-item:hover {
   background: #444444;
-  border-color: #667eea;
+  border-color: #555555;
 }
 
 .presentation-sidebar .flow-item.selected {
-  background: #667eea;
+  background: #3a3a3a;
   color: white;
-  border-color: #5a67d8;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  border-color: #555555;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 /* Flow Collections */
@@ -923,7 +924,7 @@
 .back-button {
   background: none;
   border: none;
-  color: #667eea;
+  color: #cccccc;
   cursor: pointer;
   font-size: 14px;
   padding: 0;
@@ -952,7 +953,7 @@
   padding: 12px 16px;
   background: #333333;
   border-radius: 6px;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid #3a3a3a;
   transition: all 0.2s ease;
 }
 
@@ -1013,7 +1014,7 @@
 .back-to-collections {
   background: none;
   border: none;
-  color: #667eea;
+  color: #cccccc;
   cursor: pointer;
   font-size: 14px;
   padding: 0;
@@ -1075,7 +1076,7 @@
 }
 
 .slide-grid-item:hover {
-  border-color: #667eea;
+  border-color: #555555;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
@@ -1161,7 +1162,7 @@
   padding: 8px 12px;
   background: #2a2a2a;
   border-radius: 6px;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid #3a3a3a;
   font-weight: 500;
   font-size: 14px;
 }
@@ -1237,7 +1238,7 @@
 }
 
 .connect-button {
-  background: #667eea;
+  background: #3a3a3a;
   color: white;
   border: none;
   border-radius: 6px;
@@ -1254,9 +1255,9 @@
 }
 
 .connect-button:hover {
-  background: #5a67d8;
+  background: #4a4a4a;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .connect-button.connected {
@@ -1335,27 +1336,27 @@
 
 /* Active slide styling */
 .slideItem [data-active="true"] {
-  border: 3px solid #667eea !important;
-  box-shadow: 0 0 15px rgba(102, 126, 234, 0.6) !important;
+  border: 3px solid #555555 !important;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.6) !important;
   border-radius: 8px;
 }
 
 .slideItem .active {
-  border: 3px solid #667eea !important;
-  box-shadow: 0 0 15px rgba(102, 126, 234, 0.6) !important;
+  border: 3px solid #555555 !important;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.6) !important;
   border-radius: 8px;
 }
 
 /* Target the slide renderer container */
 .slideRenderer [data-active="true"] {
-  border: 3px solid #667eea !important;
-  box-shadow: 0 0 15px rgba(102, 126, 234, 0.6) !important;
+  border: 3px solid #555555 !important;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.6) !important;
   border-radius: 8px;
 }
 
 .slideRenderer .active {
-  border: 3px solid #667eea !important;
-  box-shadow: 0 0 15px rgba(102, 126, 234, 0.6) !important;
+  border: 3px solid #555555 !important;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.6) !important;
   border-radius: 8px;
 }
 
@@ -1378,7 +1379,7 @@
   padding: 12px 16px;
   margin: 8px 0;
   border-radius: 6px;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid #3a3a3a;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1416,18 +1417,18 @@
 }
 
 .timing-dropdown:hover {
-  border-color: #667eea;
+  border-color: #666;
   background: #444;
 }
 
 .timing-dropdown:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+  border-color: #666;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
 }
 
 .auto-cycle-button {
-  background: #667eea;
+  background: #3a3a3a;
   color: white;
   border: none;
   border-radius: 4px;
@@ -1443,9 +1444,9 @@
 }
 
 .auto-cycle-button:hover {
-  background: #5a67d8;
+  background: #4a4a4a;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .auto-cycle-button.active {
@@ -1457,7 +1458,7 @@
 }
 
 .background-button {
-  background: #667eea;
+  background: #3a3a3a;
   color: white;
   border: none;
   border-radius: 4px;
@@ -1473,14 +1474,14 @@
 }
 
 .background-button:hover {
-  background: #5a67d8;
+  background: #4a4a4a;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .flow-item-divider {
   height: 2px;
-  background: linear-gradient(90deg, transparent, #667eea, transparent);
+  background: #3a3a3a;
   margin: 16px 0;
   border-radius: 1px;
 }

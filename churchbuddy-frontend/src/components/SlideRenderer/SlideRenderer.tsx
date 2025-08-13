@@ -110,6 +110,15 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
       const allElements = contentRef.current.querySelectorAll('h1, h2, h3, p, div, img, iframe');
       const cleanupFunctions: (() => void)[] = [];
 
+      // Clean up any stray handles from previous interactions within this container
+      const staleHandles = containerRef.current?.querySelectorAll('.resize-handle');
+      console.log('🧹 Cleaning up stale handles:', staleHandles?.length || 0);
+      staleHandles?.forEach(handle => {
+        const handleElement = handle as HTMLElement;
+        console.log('  - Removing handle:', handleElement.dataset.elementId, handleElement.dataset.handleName);
+        handle.remove();
+      });
+
       allElements.forEach((htmlElement) => {
         if (!(htmlElement instanceof HTMLElement)) return;
 
@@ -119,6 +128,11 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
 
         // Create handles for this element
         const allHandles: HTMLElement[] = [];
+        
+        // Ensure a stable elementId we can use to manage handles reliably
+        const elementId = htmlElement.dataset.elementId || `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        htmlElement.dataset.elementId = elementId;
+        console.log('🔧 Creating handles for element:', elementId, 'tag:', htmlElement.tagName);
 
         // Create corner handles (squares)
         const cornerHandles = [
@@ -129,27 +143,30 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         ];
 
         cornerHandles.forEach((pos) => {
-          const handle = document.createElement('div');
-          handle.style.position = 'absolute';
-          // Initial positioning will be set by adjustHandlePositions()
-          handle.style.top = '0px';
-          handle.style.left = '0px';
-          handle.style.width = pos.width;
-          handle.style.height = pos.height;
-          handle.style.background = '#ef4444';
-          handle.style.border = '1px solid white';
-          handle.style.borderRadius = '2px';
-          handle.style.cursor = pos.cursor;
-          handle.style.opacity = '0';
-          handle.style.transition = 'opacity 0.2s ease';
-          handle.style.display = 'none';
-          handle.style.zIndex = '10';
-          handle.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-          handle.contentEditable = 'false';
-          handle.style.userSelect = 'none';
-          handle.style.pointerEvents = 'auto';
-          handle.setAttribute('contenteditable', 'false');
-          handle.setAttribute('unselectable', 'on');
+            const handle = document.createElement('div');
+            console.log('    + Creating corner handle:', pos.name, 'for element:', elementId);
+            handle.className = 'resize-handle';
+            handle.dataset.elementId = elementId;
+            handle.style.position = 'absolute';
+            // Initial positioning will be set by adjustHandlePositions()
+            handle.style.top = '0px';
+            handle.style.left = '0px';
+            handle.style.width = pos.width;
+            handle.style.height = pos.height;
+            handle.style.background = 'var(--color-accent-primary)';
+            handle.style.border = '1px solid rgba(255,255,255,0.9)';
+            handle.style.borderRadius = '2px';
+            handle.style.cursor = pos.cursor;
+            handle.style.opacity = '0';
+            handle.style.transition = 'transform 0.12s ease';
+            handle.style.display = 'none';
+            handle.style.zIndex = '10';
+            handle.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+            handle.contentEditable = 'false';
+            handle.style.userSelect = 'none';
+            handle.style.pointerEvents = 'auto';
+            handle.setAttribute('contenteditable', 'false');
+            handle.setAttribute('unselectable', 'on');
           handle.dataset.handleName = pos.name;
           handle.dataset.handleType = pos.type;
           
@@ -161,6 +178,21 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             // Fallback to htmlElement if containerRef.current is not available
             htmlElement.appendChild(handle);
           }
+
+          // Enable resizing from corner handles
+          handle.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            isResizing = true;
+            // Map corner names to simpler codes used in movement logic
+            const map: Record<string, 'nw' | 'ne' | 'sw' | 'se'> = {
+              'corner-tl': 'nw',
+              'corner-tr': 'ne',
+              'corner-bl': 'sw',
+              'corner-br': 'se'
+            };
+            resizeHandle = map[pos.name];
+            handleDragStart(e as unknown as MouseEvent);
+          });
         });
         
         // Create edge handles (bars)
@@ -173,14 +205,17 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
 
         edgeHandles.forEach((pos) => {
           const handle = document.createElement('div');
+          console.log('    + Creating edge handle:', pos.name, 'for element:', elementId);
+          handle.className = 'resize-handle';
+          handle.dataset.elementId = elementId;
           handle.style.position = 'absolute';
           // Initial positioning will be set by adjustHandlePositions()
           handle.style.top = '0px';
           handle.style.left = '0px';
           handle.style.width = pos.width;
           handle.style.height = pos.height;
-          handle.style.background = '#3b82f6';
-          handle.style.border = '1px solid white';
+          handle.style.background = 'var(--color-accent-primary)';
+          handle.style.border = '1px solid rgba(255,255,255,0.9)';
           handle.style.borderRadius = '3px';
           handle.style.cursor = pos.cursor;
           handle.style.opacity = '0';
@@ -204,6 +239,21 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             // Fallback to htmlElement if containerRef.current is not available
             htmlElement.appendChild(handle);
           }
+
+          // Enable resizing from edge handles
+          handle.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            isResizing = true;
+            const map: Record<string, 'top' | 'bottom' | 'left' | 'right'> = {
+              'edge-top': 'top',
+              'edge-bottom': 'bottom',
+              'edge-left': 'left',
+              'edge-right': 'right'
+            };
+            // @ts-ignore - union with corner codes handled in move logic
+            resizeHandle = map[pos.name];
+            handleDragStart(e as unknown as MouseEvent);
+          });
         });
         
         // DRAG HANDLE COMMENTED OUT - STARTING FRESH
@@ -597,10 +647,21 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           if (htmlElement.tagName.match(/^H[1-6]$|^P$|^DIV$/)) {
             htmlElement.contentEditable = 'true';
             htmlElement.focus();
+            // Enable natural text interaction while editing
+            htmlElement.style.userSelect = 'text';
+            htmlElement.style.cursor = 'text';
+            htmlElement.dataset.isEditing = 'true';
             
-            // Select all text for easy editing
+            // Place caret at the end so a single Enter creates a new line
             const range = document.createRange();
             range.selectNodeContents(htmlElement);
+            range.collapse(false);
+            // If element is empty, insert a zero-width space so Enter works immediately
+            if (htmlElement.innerHTML === '' || htmlElement.innerHTML === '<br>') {
+              htmlElement.innerHTML = '\u200B';
+              range.selectNodeContents(htmlElement);
+              range.collapse(false);
+            }
             const selection = window.getSelection();
             if (selection) {
               selection.removeAllRanges();
@@ -610,38 +671,70 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             // Add keydown handler for Enter key to auto-expand
             const handleKeyDown = (e: KeyboardEvent) => {
               if (e.key === 'Enter') {
+                console.log('⌨️ Enter key pressed in element:', htmlElement.dataset.elementId);
+                console.log('  - Before Enter - HTML:', htmlElement.innerHTML);
+                console.log('  - Before Enter - Height:', htmlElement.style.height, 'scrollHeight:', htmlElement.scrollHeight);
                 e.preventDefault();
+                e.stopPropagation();
                 
                 // Get current selection
                 const selection = window.getSelection();
                 if (!selection || selection.rangeCount === 0) return;
                 
                 const range = selection.getRangeAt(0);
+                console.log('  - Selection range:', range.startOffset, 'to', range.endOffset);
                 
                 // Insert a line break at the cursor position
                 const br = document.createElement('br');
                 range.deleteContents();
                 range.insertNode(br);
                 
-                // Move cursor after the line break
-                range.setStartAfter(br);
-                range.collapse(true);
+                // Move cursor after the line break and insert a zero-width space on the new line
+                const afterBrRange = document.createRange();
+                afterBrRange.setStartAfter(br);
+                afterBrRange.collapse(true);
+                const zwsp = document.createTextNode('\u200B');
+                afterBrRange.insertNode(zwsp);
+                const caretRange = document.createRange();
+                caretRange.setStartAfter(zwsp);
+                caretRange.collapse(true);
                 selection.removeAllRanges();
-                selection.addRange(range);
+                selection.addRange(caretRange);
                 
-                // Save the changes
-                if (onTextEdit) {
-                  const newText = htmlElement.innerHTML || '';
-                  onTextEdit(htmlElement, newText);
-                }
+                // Auto-expand the text box height to fit
+                htmlElement.style.height = 'auto';
+                htmlElement.style.height = `${htmlElement.scrollHeight}px`;
+                console.log('  - After Enter - HTML:', htmlElement.innerHTML);
+                console.log('  - After Enter - Height:', htmlElement.style.height, 'scrollHeight:', htmlElement.scrollHeight);
+ 
+                // Update handle positions after growth
+                try { adjustHandlePositions(); updateHandleVisibility(); } catch {}
+              }
+            };
+
+            // Also handle legacy keypress for some browsers so first press is captured
+            const handleKeyPress = (e: KeyboardEvent) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleKeyDown(e);
               }
             };
             
             // Add the keydown event listener
             htmlElement.addEventListener('keydown', handleKeyDown);
+            htmlElement.addEventListener('keypress', handleKeyPress);
             
             // Store the handler for cleanup
             htmlElement.dataset.keydownHandler = 'true';
+
+            // Auto-size on input changes and keep handles in sync
+            const handleInput = () => {
+              htmlElement.style.height = 'auto';
+              htmlElement.style.height = `${htmlElement.scrollHeight}px`;
+              try { adjustHandlePositions(); updateHandleVisibility(); } catch {}
+            };
+            htmlElement.addEventListener('input', handleInput);
+            cleanupFunctions.push(() => htmlElement.removeEventListener('input', handleInput));
           }
         };
         
@@ -649,6 +742,10 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         const handleTextClick = (e: Event) => {
           if (!editMode) return;
           
+          // If already editing, allow normal click to set caret
+          if (htmlElement.isContentEditable) {
+            return;
+          }
           e.stopPropagation();
           e.preventDefault();
           
@@ -676,6 +773,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         
         const handleDragStart = (e: MouseEvent) => {
           if (!editMode) return;
+          if (htmlElement.isContentEditable) return; // Do not start drag when editing
           
           e.stopPropagation();
           e.preventDefault();
@@ -699,6 +797,18 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           
           // Prevent text selection during drag
           document.body.style.userSelect = 'none';
+          // Disable pointer events on iframes/videos while dragging to avoid capture
+          const iframes = containerRef.current?.querySelectorAll('iframe, video') || [];
+          iframes.forEach(el => ((el as HTMLElement).style.pointerEvents = 'none'));
+          
+          // Hide all resize handles while dragging to avoid leaving ghost squares
+          const allHandles = containerRef.current?.querySelectorAll('.resize-handle');
+          console.log('👻 Hiding handles during drag:', allHandles?.length || 0);
+          allHandles?.forEach(h => { 
+            const handleElement = h as HTMLElement;
+            handleElement.style.opacity = '0'; 
+            console.log('  - Hidden handle:', handleElement.dataset.elementId, handleElement.dataset.handleName);
+          });
         };
         
         const handleDragMove = (e: MouseEvent) => {
@@ -706,8 +816,10 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           
           e.preventDefault();
           
-          const deltaX = e.clientX - dragStartX;
-          const deltaY = e.clientY - dragStartY;
+          // Compensate for stage scale so movement matches cursor speed
+          const scaleForPointer = scale || 1;
+          const deltaX = (e.clientX - dragStartX) / scaleForPointer;
+          const deltaY = (e.clientY - dragStartY) / scaleForPointer;
           
           if (isResizing) {
             // Handle resize based on which handle is being dragged
@@ -724,6 +836,22 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
               newHeight = originalHeight + deltaY;
             } else if (resizeHandle === 'ne' || resizeHandle === 'nw') {
               newHeight = originalHeight - deltaY;
+            }
+
+            // Edge-only resizing (left/right/top/bottom)
+            if (resizeHandle === 'right') {
+              newWidth = originalWidth + deltaX;
+            } else if (resizeHandle === 'left') {
+              newWidth = originalWidth - deltaX;
+              const adjLeft = originalLeft + deltaX;
+              htmlElement.style.left = `${adjLeft}px`;
+            }
+            if (resizeHandle === 'bottom') {
+              newHeight = originalHeight + deltaY;
+            } else if (resizeHandle === 'top') {
+              newHeight = originalHeight - deltaY;
+              const adjTop = originalTop + deltaY;
+              htmlElement.style.top = `${adjTop}px`;
             }
             
             // Minimum size constraints
@@ -778,6 +906,11 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           htmlElement.style.cursor = 'grab';
           htmlElement.classList.remove('dragging');
           document.body.style.userSelect = '';
+          const iframes = containerRef.current?.querySelectorAll('iframe, video') || [];
+          iframes.forEach(el => ((el as HTMLElement).style.pointerEvents = 'auto'));
+          // Reposition handles for this element and show only for selection
+          adjustHandlePositions();
+          updateHandleVisibility();
           
           // For images, store the final dimensions as data attributes
           if (htmlElement.tagName === 'IMG' && isResizing) {
@@ -803,82 +936,11 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           }
         };
         
-        // Create resize handles
+        // Create resize handles (stable IDs, small blue, no duplicates)
         const createResizeHandles = () => {
-          if (!editMode) return;
-          
-          // Don't create resize handles for newly added images until they've been interacted with
-          if (htmlElement.tagName === 'IMG' && htmlElement.dataset.newlyAdded === 'true') {
-            return;
-          }
-          
-          // Generate unique ID for this element
-          const elementId = `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          htmlElement.dataset.elementId = elementId;
-          
-          // Remove existing handles for this element
-          const existingHandles = document.querySelectorAll(`.resize-handle[data-element-id="${elementId}"]`);
-          existingHandles.forEach(handle => handle.remove());
-          
-          // Create new handles
-          const handles = ['nw', 'ne', 'sw', 'se'];
-          handles.forEach(position => {
-            const handle = document.createElement('div');
-            handle.className = `resize-handle resize-handle-${position}`;
-            handle.dataset.position = position;
-            handle.dataset.elementId = elementId;
-            handle.style.cssText = `
-              position: absolute;
-              width: 20px;
-              height: 20px;
-              background: #ff0000;
-              border: 3px solid #ffffff;
-              border-radius: 50%;
-              cursor: ${position === 'nw' || position === 'se' ? 'nw-resize' : 'ne-resize'};
-              z-index: 10;
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
-              min-width: 20px;
-              min-height: 20px;
-              max-width: 20px;
-              max-height: 20px;
-              pointer-events: auto;
-            `;
-            
-            // Calculate absolute position for fixed positioning
-            const elementRect = htmlElement.getBoundingClientRect();
-            const containerRect = containerRef.current?.getBoundingClientRect(); // Get container's rect
-            if (!containerRect) return; // Ensure containerRect is available
-
-            switch(position) {
-              case 'nw':
-                handle.style.top = `${elementRect.top - containerRect.top - 10}px`;
-                handle.style.left = `${elementRect.left - containerRect.left - 10}px`;
-                break;
-              case 'ne':
-                handle.style.top = `${elementRect.top - containerRect.top - 10}px`;
-                handle.style.left = `${elementRect.right - containerRect.left - 10}px`;
-                break;
-              case 'sw':
-                handle.style.top = `${elementRect.bottom - containerRect.top - 10}px`;
-                handle.style.left = `${elementRect.left - containerRect.left - 10}px`;
-                break;
-              case 'se':
-                handle.style.top = `${elementRect.bottom - containerRect.top - 10}px`;
-                handle.style.left = `${elementRect.right - containerRect.left - 10}px`;
-                break;
-            }
-            
-            // Add resize event listeners
-            handle.addEventListener('mousedown', (e) => {
-              e.stopPropagation();
-              isResizing = true;
-              resizeHandle = position;
-              handleDragStart(e);
-            });
-            
-            // Append to containerRef.current instead of document.body
-            containerRef.current?.appendChild(handle);
-          });
+          // Using initial per-element handles; skip duplicate creation
+          console.log('↩️ Skipping duplicate createResizeHandles (handled by initial handles)');
+          return;
         };
         
         // Show/hide resize handles based on selection
@@ -909,6 +971,10 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         // Also handle mousedown to ensure click is captured
         const handleMouseDown = (e: Event) => {
           e.stopPropagation();
+          // Do not process mousedown for drag/select while editing so caret can be set
+          if (htmlElement.isContentEditable) {
+            return;
+          }
           
           // Remove newlyAdded flag when image is interacted with
           if (htmlElement.tagName === 'IMG' && htmlElement.dataset.newlyAdded === 'true') {
@@ -945,6 +1011,10 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         const handleBlur = () => {
           try {
             htmlElement.contentEditable = 'false';
+            htmlElement.dataset.isEditing = 'false';
+            // Restore edit-mode interaction defaults
+            htmlElement.style.userSelect = 'none';
+            htmlElement.style.cursor = 'grab';
             
             if (onTextEdit) {
               // Use innerHTML to preserve line breaks and formatting
@@ -960,6 +1030,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         const updateHandleVisibility = () => {
           // Hide all handles first, but only those within the current container
           const allHandles = containerRef.current?.querySelectorAll('.resize-handle');
+          console.log('👁️ updateHandleVisibility - hiding all handles:', allHandles?.length || 0);
           allHandles?.forEach(handle => {
             (handle as HTMLElement).style.display = 'none';
             (handle as HTMLElement).style.opacity = '0';
@@ -969,12 +1040,15 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
           const selectedElement = containerRef.current?.querySelector('.selected');
           if (selectedElement) {
             const elementHandles = containerRef.current?.querySelectorAll(`.resize-handle[data-element-id="${(selectedElement as HTMLElement).dataset.elementId}"]`);
+            console.log('👁️ Showing handles for selected element:', (selectedElement as HTMLElement).dataset.elementId, 'found handles:', elementHandles?.length || 0);
             if (elementHandles) {
               elementHandles.forEach(handle => {
                 (handle as HTMLElement).style.display = 'block';
                 (handle as HTMLElement).style.opacity = '1';
               });
             }
+          } else {
+            console.log('👁️ No selected element found');
           }
         };
         
@@ -986,7 +1060,17 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         const handleMouseLeave = () => {
           // No hover effects for now - keeping it simple
         };
-        
+
+        // Debounced handle adjustment to avoid thrash during rapid typing
+        let adjustTimer: number | null = null;
+        const scheduleAdjust = () => {
+          if (adjustTimer) window.clearTimeout(adjustTimer);
+          adjustTimer = window.setTimeout(() => {
+            try { adjustHandlePositions(); updateHandleVisibility(); } catch {}
+            adjustTimer = null;
+          }, 50);
+        };
+
         // DRAG EVENT LISTENERS COMMENTED OUT - STARTING FRESH
         /*
         // Attach interaction handlers to all handles
@@ -994,7 +1078,7 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             handle.addEventListener('mousedown', handleInteractionStart);
           });
         */
-        
+
         // Attach editing to the text element and images
         htmlElement.addEventListener('click', handleTextClick);
         htmlElement.addEventListener('dblclick', handleDoubleClick);
@@ -1002,7 +1086,11 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         htmlElement.addEventListener('blur', handleBlur);
         htmlElement.addEventListener('mouseenter', handleMouseEnter);
         htmlElement.addEventListener('mouseleave', handleMouseLeave);
-        
+        if (htmlElement.tagName.match(/^H[1-6]$|^P$|^DIV$/)) {
+          htmlElement.addEventListener('input', scheduleAdjust);
+          cleanupFunctions.push(() => htmlElement.removeEventListener('input', scheduleAdjust));
+        }
+
         // Add global mouse event listeners for drag - these should still be on document for global drag operations
         const handleGlobalMouseMove = (e: MouseEvent) => {
           if (isDragging) {
@@ -1021,12 +1109,14 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
         
         // Create resize handles for text elements and images
         if (editMode && htmlElement.tagName.match(/^H[1-6]$|^P$|^DIV$|^IMG$/)) {
-          createResizeHandles();
+          console.log('🎯 Initial handles already created for:', htmlElement.tagName, 'elementId:', htmlElement.dataset.elementId);
         }
         
         // Initial handle visibility - hide all handles initially
         if (editMode) {
+          console.log('⏰ Setting initial handle visibility timeout for element:', htmlElement.dataset.elementId);
           setTimeout(() => {
+            console.log('⏰ Executing initial handle visibility for element:', htmlElement.dataset.elementId);
             updateHandleVisibility();
           }, 50);
         }
@@ -1048,8 +1138,8 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             htmlElement.style.minWidth = '100px';
             htmlElement.style.minHeight = '30px';
             htmlElement.style.padding = '8px';
-            htmlElement.style.border = '1px dashed #007bff';
-            htmlElement.style.backgroundColor = 'rgba(0, 123, 255, 0.1)';
+            htmlElement.style.border = '1px dashed var(--color-primary)';
+            htmlElement.style.backgroundColor = 'rgba(102, 126, 234, 0.1)';
             htmlElement.style.borderRadius = '4px';
           }
           
@@ -1058,6 +1148,17 @@ const SlideRenderer: React.FC<SlideRendererProps> = ({ slide, className, editMod
             const imgElement = htmlElement as HTMLImageElement;
             const isNewlyAdded = imgElement.dataset.newlyAdded === 'true';
             const hasBeenResized = imgElement.dataset.hasBeenResized === 'true';
+            // Soft cap huge images to reduce layout cost
+            const naturalW = (imgElement as any).naturalWidth || 0;
+            const naturalH = (imgElement as any).naturalHeight || 0;
+            const maxW = 2048; const maxH = 2048;
+            if (!hasBeenResized && (naturalW > maxW || naturalH > maxH)) {
+              const ratio = Math.min(maxW / Math.max(naturalW, 1), maxH / Math.max(naturalH, 1));
+              if (ratio > 0 && ratio < 1) {
+                imgElement.style.width = Math.floor((naturalW || 1920) * ratio) + 'px';
+                imgElement.style.height = 'auto';
+              }
+            }
             
             // Only remove constraints and restore dimensions if the image has been manually resized
             if (hasBeenResized && !isNewlyAdded) {

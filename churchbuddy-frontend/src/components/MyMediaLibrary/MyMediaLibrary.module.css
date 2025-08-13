@@ -80,8 +80,8 @@
 }
 
 .uploadArea.dragActive {
-  border-color: #007bff;
-  background: #1a3a5a;
+  border-color: var(--color-primary);
+  background: rgba(102, 126, 234, 0.15);
   transform: scale(1.02);
 }
 
@@ -110,7 +110,7 @@
 }
 
 .browseButton {
-  background: #007bff;
+  background: var(--color-primary);
   color: white;
   border: none;
   padding: 12px 24px;
@@ -122,7 +122,7 @@
 }
 
 .browseButton:hover {
-  background: #0056b3;
+  background: var(--color-primary-600);
 }
 
 .uploadProgress {
@@ -143,7 +143,7 @@
 
 .progressFill {
   height: 100%;
-  background: #007bff;
+  background: var(--color-primary);
   transition: width 0.3s ease;
 }
 
@@ -173,12 +173,12 @@
 .mediaItem:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-  border-color: #007bff;
+  border-color: var(--color-primary);
 }
 
 .mediaItem.selected {
-  border-color: #007bff;
-  background: #1a3a5a;
+  border-color: var(--color-primary);
+  background: rgba(102, 126, 234, 0.15);
 }
 
 .mediaPreview {
@@ -217,7 +217,7 @@
 
 .mediaUsage {
   margin: 0;
-  color: #007bff;
+  color: var(--color-primary);
   font-size: 12px;
   font-weight: 500;
 }
@@ -237,7 +237,7 @@
 }
 
 .useButton {
-  background: #007bff;
+  background: var(--color-primary);
   color: white;
   border: none;
   padding: 4px 8px;
@@ -248,7 +248,7 @@
 }
 
 .useButton:hover {
-  background: #0056b3;
+  background: var(--color-primary-600);
 }
 
 .deleteButton {

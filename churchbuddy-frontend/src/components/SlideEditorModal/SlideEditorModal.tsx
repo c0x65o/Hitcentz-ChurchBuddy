@@ -325,6 +325,27 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     }
   };
 
+  const handleTextAlign = (align: 'left' | 'center' | 'right') => {
+    const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
+    if (selectedElement) {
+      selectedElement.style.textAlign = align;
+      
+      // Persist change
+      const slideContentEl = document.querySelector('[data-slide-id="modal-editor"]');
+      if (slideContentEl) {
+        const cleanHtml = slideContentEl.innerHTML;
+        setCurrentSlideHtml(cleanHtml);
+        
+        const updatedSlide: ISlide = {
+          ...slide,
+          html: cleanHtml,
+          updatedAt: new Date()
+        };
+        onSave(updatedSlide, false);
+      }
+    }
+  };
+
   const handleRotate = () => {
     console.log('=== ROTATE BUTTON CLICKED ===');
     const selectedElement = document.querySelector('[data-slide-id="modal-editor"] .selected') as HTMLElement;
@@ -418,8 +439,8 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
     imgElement.style.minWidth = '100px';
     imgElement.style.minHeight = '30px';
     imgElement.style.padding = '8px';
-    imgElement.style.border = '1px dashed #007bff';
-    imgElement.style.backgroundColor = 'rgba(0, 123, 255, 0.1)';
+    imgElement.style.border = '1px dashed var(--color-primary)';
+    imgElement.style.backgroundColor = 'rgba(102, 126, 234, 0.1)';
     imgElement.style.borderRadius = '4px';
     imgElement.title = 'Click to select, drag to move';
     
@@ -1125,6 +1146,27 @@ const SlideEditorModal: React.FC<SlideEditorModalProps> = ({
               onClick={handleItalicToggle}
             >
               <em>I</em>
+            </button>
+            <button
+              className={styles.toolButton}
+              title="Align Left"
+              onClick={() => handleTextAlign('left')}
+            >
+              ⟸ L
+            </button>
+            <button
+              className={styles.toolButton}
+              title="Align Center"
+              onClick={() => handleTextAlign('center')}
+            >
+              C
+            </button>
+            <button
+              className={styles.toolButton}
+              title="Align Right"
+              onClick={() => handleTextAlign('right')}
+            >
+              R ⟹
             </button>
           </div>
 

@@ -208,7 +208,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.3);
+  background: #2a2a2a; /* Grey wrapper behind black slide */
   border-radius: 8px;
   margin: 0 32px 32px 32px;
   min-height: 0; /* Allow flex item to shrink */

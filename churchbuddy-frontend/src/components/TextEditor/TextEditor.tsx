@@ -81,19 +81,31 @@ const TextEditor: React.FC<TextEditorProps> = ({
       const element = button as HTMLElement;
 
       if (slideId === activeSlideId && isPreachMode) {
-        // Apply active styles
-        element.style.background = 'rgba(0, 123, 255, 0.2)';
-        element.style.color = '#007bff';
+        // Active: bright pill with dark text
+        element.style.background = '#ffd166';
+        element.style.color = '#111111';
+        element.style.fontWeight = '700';
+        element.style.borderColor = '#ffca3a';
+        element.style.boxShadow = '0 0 0 3px rgba(255, 209, 102, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25)';
+      } else if (isPreachMode) {
+        // Inactive in preach: light blue pill with black text
+        element.style.background = 'rgba(102, 126, 234, 0.2)';
+        element.style.color = '#111111';
         element.style.fontWeight = '600';
-        element.style.borderColor = 'rgba(0, 123, 255, 0.5)';
-        element.style.boxShadow = '0 2px 4px rgba(0, 123, 255, 0.3)';
+        element.style.borderColor = 'rgba(102, 126, 234, 0.5)';
+        element.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.15)';
+        element.classList.remove('active');
       } else {
-        // Apply inactive (default) styles
-        element.style.background = 'rgba(102, 126, 234, 0.1)';
-        element.style.color = '#667eea';
+        // Editing mode default (subtle)
+        element.style.background = '#f4f5f7';
+        element.style.color = '#111111';
         element.style.fontWeight = '500';
-        element.style.borderColor = 'rgba(102, 126, 234, 0.3)';
+        element.style.borderColor = '#cfd3d8';
         element.style.boxShadow = 'none';
+        element.classList.remove('active');
+      }
+      if (isPreachMode && slideId === activeSlideId) {
+        element.classList.add('active');
       }
     });
   }, [activeSlideId, isPreachMode]);
@@ -225,23 +237,23 @@ const TextEditor: React.FC<TextEditorProps> = ({
     button.setAttribute('data-original-text', slideInfo.originalText);
     
     // Get current editor font size to match slide button
-    const currentFontSize = editorRef.current?.style.fontSize || '16px';
+    const currentFontSize = editorRef.current?.style.fontSize || '18px';
     
     // Check if this slide is currently active
     const isActive = slideInfo.slideId === activeSlideId;
     
     button.style.cssText = `
       display: inline-block;
-      background: ${isActive ? 'rgba(0, 123, 255, 0.2)' : 'rgba(102, 126, 234, 0.1)'};
-      color: ${isActive ? '#007bff' : '#667eea'};
-      padding: 4px 8px;
+      background: ${isActive ? '#ffd166' : (isPreachMode ? 'rgba(102, 126, 234, 0.2)' : 'rgba(102, 126, 234, 0.12)')};
+      color: ${isActive ? '#333333' : (isPreachMode ? '#333333' : '#333333')};
+      padding: 6px 10px;
       margin: 1px 2px;
       border-radius: 4px;
       font-size: ${currentFontSize};
-      font-weight: ${isActive ? '600' : '500'};
+      font-weight: ${isActive ? '700' : (isPreachMode ? '600' : '500')};
       cursor: pointer;
-      border: 1px solid ${isActive ? 'rgba(0, 123, 255, 0.5)' : 'rgba(102, 126, 234, 0.3)'};
-      box-shadow: ${isActive ? '0 2px 4px rgba(0, 123, 255, 0.3)' : 'none'};
+      border: 1px solid ${isActive ? '#ffca3a' : (isPreachMode ? 'rgba(102, 126, 234, 0.5)' : 'rgba(102, 126, 234, 0.3)')};
+      box-shadow: ${isActive ? '0 0 0 3px rgba(255, 209, 102, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25)' : (isPreachMode ? '0 1px 3px rgba(0, 0, 0, 0.15)' : 'none')};
       user-select: none;
       transition: all 0.2s ease;
       line-height: 1.4;
@@ -254,16 +266,18 @@ const TextEditor: React.FC<TextEditorProps> = ({
     button.innerHTML = slideInfo.originalText;
     
     // Add hover effect
-    button.addEventListener('mouseenter', () => {
-      button.style.background = isActive ? 'rgba(0, 123, 255, 0.25)' : 'rgba(102, 126, 234, 0.15)';
-      button.style.borderColor = isActive ? 'rgba(0, 123, 255, 0.6)' : 'rgba(102, 126, 234, 0.5)';
-      button.style.boxShadow = isActive ? '0 3px 6px rgba(0, 123, 255, 0.4)' : '0 1px 3px rgba(102, 126, 234, 0.2)';
+      button.addEventListener('mouseenter', () => {
+      button.style.background = isActive ? '#ffcd4d' : (isPreachMode ? 'rgba(102, 126, 234, 0.3)' : 'rgba(102, 126, 234, 0.18)');
+      button.style.borderColor = isActive ? '#ffcd4d' : (isPreachMode ? 'rgba(102, 126, 234, 0.6)' : 'rgba(102, 126, 234, 0.45)');
+      button.style.color = isActive ? '#333333' : (isPreachMode ? '#333333' : '#333333');
+      button.style.boxShadow = isActive ? '0 3px 8px rgba(0, 0, 0, 0.35)' : '0 1px 3px rgba(0, 0, 0, 0.2)';
     });
     
-    button.addEventListener('mouseleave', () => {
-      button.style.background = isActive ? 'rgba(0, 123, 255, 0.2)' : 'rgba(102, 126, 234, 0.1)';
-      button.style.borderColor = isActive ? 'rgba(0, 123, 255, 0.5)' : 'rgba(102, 126, 234, 0.3)';
-      button.style.boxShadow = isActive ? '0 2px 4px rgba(0, 123, 255, 0.3)' : 'none';
+      button.addEventListener('mouseleave', () => {
+      button.style.background = isActive ? '#ffd166' : (isPreachMode ? 'rgba(102, 126, 234, 0.2)' : 'rgba(102, 126, 234, 0.12)');
+      button.style.borderColor = isActive ? '#ffca3a' : (isPreachMode ? 'rgba(102, 126, 234, 0.5)' : 'rgba(102, 126, 234, 0.3)');
+      button.style.boxShadow = isActive ? '0 0 0 3px rgba(255, 209, 102, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25)' : (isPreachMode ? '0 1px 3px rgba(0, 0, 0, 0.15)' : 'none');
+      button.style.color = isActive ? '#333333' : (isPreachMode ? '#333333' : '#333333');
     });
     
     return button;
@@ -318,7 +332,7 @@ const TextEditor: React.FC<TextEditorProps> = ({
               onClick={onClearSlides}
               title="Clear all slides and slide buttons"
             >
-              🗑️ Clear Slides
+              Clear Slides
             </button>
           )}
           {showMakeSlideButton && !isPreachMode && (
@@ -327,7 +341,7 @@ const TextEditor: React.FC<TextEditorProps> = ({
               onClick={handleMakeSlide}
               title="Create slide from selected text"
             >
-              📄 Make Slide
+              Make Slide
             </button>
           )}
         </div>
@@ -339,13 +353,13 @@ const TextEditor: React.FC<TextEditorProps> = ({
               onClick={onPreachMode}
               title={isPreachMode ? "Return to edit mode" : "Switch to presentation mode"}
             >
-              {isPreachMode ? "✏️ Edit" : "📖 Preach"}
+              {isPreachMode ? "Edit" : "Preach"}
             </button>
           )}
           
           {isPreachMode && (
             <div className={styles.preachModeMessage}>
-              📝 Read-only mode • Click slide buttons
+              Read-only mode • Click slide buttons
             </div>
           )}
           
@@ -384,7 +398,7 @@ const TextEditor: React.FC<TextEditorProps> = ({
                 onClick={handleHighlight}
                 title="Highlight"
               >
-                🟡
+                Highlight
               </button>
             </>
           )}
@@ -392,9 +406,9 @@ const TextEditor: React.FC<TextEditorProps> = ({
       </div>
 
       {/* Editor Area */}
-      <div className={styles.editorArea}>
-        <div className={styles.documentContainer}>
-          <div className={`${styles.document} ${isPreachMode ? styles.preachMode : ''}`}>
+      <div className={`${styles.editorArea} ${isPreachMode ? styles.preachMode : ''}`}>
+        <div className={`${styles.documentContainer} ${isPreachMode ? styles.preachMode : ''}`}>
+          <div className={`${styles.document} ${isPreachMode ? styles.preachMode : ''}`} style={isPreachMode ? {paddingTop: '64px', paddingBottom: '64px'} : undefined}>
             <div
               ref={editorRef}
               className={`${styles.editor} ${isEditing ? styles.editing : ''} ${isPreachMode ? styles.preachMode : ''}`}
